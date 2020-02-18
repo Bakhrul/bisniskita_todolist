@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['middleware' => 'auth:api'], function(){
+
+	Route::get('/listkategori','KategoriController@getDataKategori');
     Route::get('/user', 'UserController@user');
     //=============================|End|=========================================
     //=============================|Project|=========================================
