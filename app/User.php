@@ -15,7 +15,6 @@ class User extends Authenticatable
 
     protected $table = "m_users";
     protected $primaryKey = "us_id";
-    public $incrementing   = false;
     public $remember_token = false;
     protected $hidden = [
         'password', 'remember_token',
