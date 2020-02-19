@@ -20,5 +20,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     //=============================|End|=========================================
     //=============================|Project|=========================================
     Route::get('/project','ProjectController@index');
+    Route::post('/create_project','ProjectController@create_project');
+    Route::post('/detail_project','ProjectController@detail_project');
 
 });

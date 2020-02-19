@@ -3,7 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Project;
+use DB;
+use Auth;
+use Hash;
+use File;
+use Crypt;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProjectController extends Controller
 {
@@ -27,6 +34,48 @@ class ProjectController extends Controller
             array_push($datas,$arr);
         }
         return response()->json($datas);
+    }
+
+    public function create_project(Request $request){
+        DB::beginTransaction();
+        try {
+        DB::table('d_project')->insert([
+            'p_name' => $request->nama_project,
+            'p_creator' => Auth::user()->us_id,
+            'p_timestart' => Carbon::parse($request->time_start),
+            'p_timeend' => Carbon::parse($request->time_end),
+            'p_status' => 'Open',
+            'p_created' => Carbon::now('Asia/Jakarta'),
+            'p_updated' => Carbon::now('Asia/Jakarta'),
+        ]);
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }
+        
+    }
+    public function detail_project(Request $request){
+
+        $getMember = DB::table('d_member_project')
+                    ->join('m_users','mp_user','us_id')
+                    ->join('m_roles','mp_role','r_id')
+                    ->where('mp_project',$request->project)
+                    ->get();
+
+        $getTodo = DB::table('d_todolist')
+                    ->where('tl_project',$request->project)
+                    ->get();
+
+        return response()->json([
+            'member' => $getMember,
+            'todo' => $getTodo,
+        ]);
+
     }
 
     /**

@@ -9,5 +9,6 @@ class Project extends Model
     protected $table = 'd_project';
     public $timestamps =false;
     protected $primaryKey = 'p_id';
-    
+
+     protected $fillable = ['*'];
 }
