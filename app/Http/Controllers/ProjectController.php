@@ -78,6 +78,158 @@ class ProjectController extends Controller
 
     }
 
+    public function add_member_project(Request $request){
+        DB::beginTransaction();
+        try {
+        
+        $cekUser = DB::table('m_users')->where('us_email',$request->member)->first();
+
+        if($cekUser == null){
+            return response()->json([
+                'status' => 'user tidak ada',
+            ]);
+        }else{
+            $cekMember = DB::table('d_member_project')->where('mp_user',$cekUser->us_id)->where('mp_project',$request->project)->first();
+            $cekTodo = DB::table('d_todolist')->where('tl_project',$request->project)->get();
+            if($cekMember == null){
+                DB::table('d_member_project')->insert([
+                    'mp_project' => $request->project,
+                    'mp_user' => $cekUser->us_id,
+                    'mp_role' => $request->status,
+                    'mp_created' => Carbon::now(),
+                    'mp_updated' => Carbon::now(),
+                ]);
+
+                foreach ($cekTodo as $key => $value) {
+                    DB::table('d_todolist_roles')->where('tlr_users',$cekUser->us_id)->where('tlr_todolist',$value->tl_id)->delete();
+                    DB::table('d_todolist_roles')->insert([
+                        'tlr_users' => $cekUser->us_id,
+                        'tlr_todolist' => $value->tl_id,
+                        'tlr_role' => $request->status,
+                    ]);
+                }
+            }else{
+                $cekRole = DB::table('m_roles')->where('r_id',$cekMember->mp_role)->first();
+                return response()->json([
+                    'status' => 'member sudah ada',
+                    'role' => $cekRole->r_name,
+                ]);
+            }
+        }
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }
+    }
+
+    public function add_todo_project(Request $request){
+        DB::beginTransaction();
+        try {
+        
+        $maxIdTodo = DB::table('d_todolist')->max('tl_id') + 1;
+        DB::table('d_todolist')->insert([
+            'tl_id' => $maxIdTodo,
+            'tl_category' => '1',
+            'tl_project' => $request->project,
+            'tl_title' => $request->nama_todo,
+            'tl_desc' => $request->deskripsi,
+            'tl_status' => 'Open',
+            'tl_progress' => 0,
+            'tl_planstart' => Carbon::parse($request->tanggal_awal)->format('Y-m-d H:i:s'),
+            'tl_planend' => Carbon::parse($request->tanggal_akhir)->format('Y-m-d H:i:s'),
+            'tl_created' => Carbon::now('Asia/Jakarta'),
+            'tl_updated' => Carbon::now('Asia/Jakarta'),
+        ]);
+
+        $getMember = DB::table('d_member_project')->where('mp_project',$request->project)->get();
+        foreach ($getMember as $key => $value) {
+            DB::table('d_todolist_roles')->where('tlr_users',$value->mp_user)->where('tlr_todolist',$maxIdTodo)->delete();
+            DB::table('d_todolist_roles')->insert([
+                'tlr_users' => $value->mp_user,
+                'tlr_todolist' => $maxIdTodo,
+                'tlr_role' => $value->mp_role,
+            ]);
+        }
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }   
+    }
+    public function delete_member_project(Request $request){
+     DB::beginTransaction();
+        try {
+        DB::table('d_member_project')->where('mp_project',$request->project)->where('mp_user',$request->member)->delete();
+
+        $getTodo = DB::table('d_todolist')->where('tl_project',$request->project)->get();
+
+        foreach ($getTodo as $key => $value) {
+            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->delete();
+        }
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }      
+    }
+
+    public function delete_todo_project(Request $request){
+     DB::beginTransaction();
+        try {
+        DB::table('d_todolist')->where('tl_project',$request->project)->where('tl_id',$request->todolist)->delete();
+
+        $getMember = DB::table('d_member_project')->where('mp_project',$request->project)->get();
+
+        foreach ($getMember as $key => $value) {
+            DB::table('d_todolist_roles')->where('tlr_users',$value->mp_user)->where('tlr_todolist',$request->todolist)->delete();
+        }
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }      
+    }
+    public function update_status_member_project(Request $request){
+     DB::beginTransaction();
+        try {
+        DB::table('d_member_project')->where('mp_user',$request->member)->where('mp_project',$request->project)->update([
+            'mp_role' => $request->role,
+        ]);
+
+        $getTodoProject = DB::table('d_todolist')->where('tl_project',$request->project)->get();
+
+        foreach ($getTodoProject as $key => $value) {
+            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->update([
+                'tlr_role' => $request->role,
+            ]);
+        }
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }         
+    }
     /**
      * Show the form for creating a new resource.
      *
