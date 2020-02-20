@@ -30,21 +30,23 @@ class ToDoController extends Controller
 
     public function index($index)
     {
+          setlocale(LC_TIME, 'IND');
+
         $type = $index;
         $todos = array();
-        $data = Todo::orderBy('tl_planstart','ASC')->where('tl_project','=',NULL);
+        $data = Todo::orderBy('tl_planstart','ASC');
 
         if ($type == "1") {
 
-            $data = $data->where("tl_planstart" ,'<=', Carbon::now()->setTime(23,59,59))
-            ->where("tl_planend" ,'>',Carbon::now())
+            $data = $data->where("tl_planstart" ,'<=', Carbon::today()->setTime(23,59,59))
+            ->where("tl_planend" ,'>',Carbon::today())
             ->limit(5)->get();
 
         }else if ($type == "2") {
             $data = $data->where(function($q){
-            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now()->addDays(4)])
+            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::today()->addDays(4)])
             ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::now()->addDays(4)->setTime(23,59,59));
+            ->Where('tl_planend','<=', Carbon::today()->addDays(4)->setTime(23,59,59));
             })->limit(5)->get();
         }else if ($type == "3") {
             $data = $data->where(function($q){
