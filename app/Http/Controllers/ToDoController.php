@@ -32,38 +32,38 @@ class ToDoController extends Controller
     {
         $type = $index;
         $todos = array();
-        $data = Todo::orderBy('tl_planstart','ASC')->where('tl_project','=',NULL);
+        $data = Todo::orderBy('tl_planstart','ASC');
 
         if ($type == "1") {
 
-            $data = $data->where("tl_planstart" ,'<=', Carbon::now()->setTime(23,59,59))
-            ->where("tl_planend" ,'>',Carbon::now())
+            $data = $data->where("tl_planstart" ,'<=', Carbon::today()->setTime(23,59,59))
+            ->where("tl_planend" ,'>',Carbon::today())
             ->limit(5)->get();
 
         }else if ($type == "2") {
             $data = $data->where(function($q){
-            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now()->addDays(4)])
+            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::today()->addDays(4)])
             ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::now()->addDays(4)->setTime(23,59,59));
+            ->Where('tl_planend','<=', Carbon::today()->addDays(4)->setTime(23,59,59));
             })->limit(5)->get();
         }else if ($type == "3") {
             $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now()->addDays(5),Carbon::now()->addDays(13)])
-            ->orWhere("tl_planend" ,'>',Carbon::now()->addDays(5))
-            ->Where('tl_planend','<=', Carbon::now()->addDays(13)->setTime(23,59,59));
+              $q->whereBetween("tl_planstart" ,[Carbon::today()->addDays(5),Carbon::today()->addDays(13)])
+            ->orWhere("tl_planend" ,'>',Carbon::today()->addDays(5))
+            ->Where('tl_planend','<=', Carbon::today()->addDays(13)->setTime(23,59,59));
             })->limit(5)->get();
         }else if ($type == "4") {
             $data = $data->where(function($q){
               $q->whereBetween("tl_planstart" ,[Carbon::today()->addDays(13),Carbon::today()->addDays(32)])
-            ->orWhere("tl_planend" ,'>',Carbon::now()->addDays(13))
-            ->Where('tl_planend','<=', Carbon::now()->addDays(32)->setTime(23,59,59));
+            ->orWhere("tl_planend" ,'>',Carbon::today()->addDays(13))
+            ->Where('tl_planend','<=', Carbon::today()->addDays(32)->setTime(23,59,59));
             })->limit(5)->get();
         }
         else if ($type == "5") {
             $data = $data->where(function($q){
               $q->whereBetween("tl_planstart" ,[Carbon::today()->addDays(33),Carbon::today()->addDays(62)])
-            ->orWhere("tl_planend" ,'>',Carbon::now()->addDays(33))
-            ->Where('tl_planend','<=', Carbon::now()->addDays(62)->setTime(23,59,59));
+            ->orWhere("tl_planend" ,'>',Carbon::today()->addDays(33))
+            ->Where('tl_planend','<=', Carbon::today()->addDays(62)->setTime(23,59,59));
             })->limit(5)->get();
         }
 
