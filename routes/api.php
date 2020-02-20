@@ -24,6 +24,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/category','ToDoController@category');
 
     //=============================|Todo|=========================================
+    Route::get('/todo/{index}','ToDoController@index');
     Route::post('/todo/create','ToDoController@store');
     //=============================|Project|=========================================
     Route::get('/project','ProjectController@index');

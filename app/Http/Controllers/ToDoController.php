@@ -16,7 +16,7 @@ class ToDoController extends Controller
      */
     public function category()
     {
-        $data = DB::table('m_category')->orderBy('c_name','ASC')->get();
+        $data = DB::table('m_category')->where('c_name','!=','Project')->orderBy('c_name','ASC')->get();
         $datas = array();
         foreach ($data as $key => $value) {
             $arr = [
@@ -28,9 +28,57 @@ class ToDoController extends Controller
         return response()->json($datas);
     }
 
-    public function index()
+    public function index($index)
     {
-        
+        $type = $index;
+        $todos = array();
+        $data = Todo::orderBy('tl_planstart','ASC')->where('tl_project','=',NULL);
+
+        if ($type == "1") {
+
+            $data = $data->where("tl_planstart" ,'<=', Carbon::now()->setTime(23,59,59))
+            ->where("tl_planend" ,'>',Carbon::now())
+            ->limit(5)->get();
+
+        }else if ($type == "2") {
+            $data = $data->where(function($q){
+            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now()->addDays(4)])
+            ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
+            ->Where('tl_planend','<=', Carbon::now()->addDays(4)->setTime(23,59,59));
+            })->limit(5)->get();
+        }else if ($type == "3") {
+            $data = $data->where(function($q){
+              $q->whereBetween("tl_planstart" ,[Carbon::now()->addDays(5),Carbon::now()->addDays(13)])
+            ->orWhere("tl_planend" ,'>',Carbon::now()->addDays(5))
+            ->Where('tl_planend','<=', Carbon::now()->addDays(13)->setTime(23,59,59));
+            })->limit(5)->get();
+        }else if ($type == "4") {
+            $data = $data->where(function($q){
+              $q->whereBetween("tl_planstart" ,[Carbon::today()->addDays(13),Carbon::today()->addDays(32)])
+            ->orWhere("tl_planend" ,'>',Carbon::now()->addDays(13))
+            ->Where('tl_planend','<=', Carbon::now()->addDays(32)->setTime(23,59,59));
+            })->limit(5)->get();
+        }
+        else if ($type == "5") {
+            $data = $data->where(function($q){
+              $q->whereBetween("tl_planstart" ,[Carbon::today()->addDays(33),Carbon::today()->addDays(62)])
+            ->orWhere("tl_planend" ,'>',Carbon::now()->addDays(33))
+            ->Where('tl_planend','<=', Carbon::now()->addDays(62)->setTime(23,59,59));
+            })->limit(5)->get();
+        }
+
+        foreach ($data as $key => $value) {
+           $arr = [
+                'id'    => $value->tl_id,
+                'title' => $value->tl_title,
+                'start' => $value->tl_planstart,
+                'end'   => $value->tl_planend,
+                'status' => $value->tl_status,
+                'category' => $value->tl_category,
+            ];
+            array_push($todos,$arr);
+        }
+        return response()->json($todos);
     }
 
     /**
