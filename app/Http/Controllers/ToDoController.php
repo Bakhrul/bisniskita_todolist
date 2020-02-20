@@ -32,7 +32,7 @@ class ToDoController extends Controller
     {
         $type = $index;
         $todos = array();
-        $data = Todo::orderBy('tl_planstart','ASC');
+        $data = Todo::orderBy('tl_planstart','ASC')->leftJoin('d_todolist_roles','tlr_todolist','tl_id')->where('tlr_users',Auth::user()->us_id);
 
         if ($type == "1") {
 
