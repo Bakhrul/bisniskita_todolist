@@ -6,6 +6,7 @@ use App\Todo;
 use Illuminate\Http\Request;
 use DB;
 use Carbon\Carbon;
+use Auth;
 
 class ToDoController extends Controller
 {
@@ -16,7 +17,7 @@ class ToDoController extends Controller
      */
     public function category()
     {
-        $data = DB::table('m_category')->where('c_name','!=','Project')->orderBy('c_name','ASC')->get();
+        $data = DB::table('m_category')->orderBy('c_name','ASC')->get();
         $datas = array();
         foreach ($data as $key => $value) {
             $arr = [
@@ -34,7 +35,7 @@ class ToDoController extends Controller
 
         $type = $index;
         $todos = array();
-        $data = Todo::orderBy('tl_planstart','ASC');
+        $data = Todo::orderBy('tl_planstart','ASC')->leftJoin('d_todolist_roles','tlr_todolist','tl_id')->where('tlr_users',Auth::user()->us_id);
 
         if ($type == "1") {
 
