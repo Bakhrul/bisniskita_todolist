@@ -30,6 +30,8 @@ class ToDoController extends Controller
 
     public function index($index)
     {
+          setlocale(LC_TIME, 'IND');
+
         $type = $index;
         $todos = array();
         $data = Todo::orderBy('tl_planstart','ASC')->leftJoin('d_todolist_roles','tlr_todolist','tl_id')->where('tlr_users',Auth::user()->us_id);
