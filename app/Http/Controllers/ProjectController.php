@@ -8,6 +8,7 @@ use Auth;
 use Hash;
 use File;
 use Crypt;
+use App\Todo;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -21,8 +22,9 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        $data = Project::orderBy('p_id','ASC')->get();
+        $data = Project::orderBy('p_id','ASC')->limit(3)->get();
         $datas = array();
+
         foreach($data as $value){
             $arr = [
                 'id'    => $value->p_id,
