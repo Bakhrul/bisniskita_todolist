@@ -6,6 +6,7 @@ use App\Todo;
 use Illuminate\Http\Request;
 use DB;
 use Carbon\Carbon;
+use Auth;
 
 class ToDoController extends Controller
 {
