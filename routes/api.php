@@ -35,5 +35,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/delete_member_project','ProjectController@delete_member_project');
     Route::post('/delete_todo_project','ProjectController@delete_todo_project');
     Route::post('/update_status_member_project','ProjectController@update_status_member_project');
+    Route::post('/update_status_todo_project','ProjectController@update_status_todo_project');
+    Route::post('/getdata_project','ProjectController@getdata_project');
 
 });
