@@ -39,6 +39,7 @@ class ProjectController extends Controller
     public function create_project(Request $request){
         DB::beginTransaction();
         try {
+        $idProject = DB::table('d_project')->max('p_id') + 1;
         DB::table('d_project')->insert([
             'p_name' => $request->nama_project,
             'p_creator' => Auth::user()->us_id,
@@ -49,9 +50,18 @@ class ProjectController extends Controller
             'p_updated' => Carbon::now('Asia/Jakarta'),
         ]);
 
+        DB::table('d_member_project')->insert([
+            'mp_project' => $idProject,
+            'mp_user' => Auth::user()->us_id,
+            'mp_role' => '1',
+            'mp_created' => Carbon::now('Asia/Jakarta'),
+            'mp_updated' => Carbon::now('Asia/Jakarta'),
+        ]);
+
         DB::commit();
         return response()->json([
             'status' => 'success',
+            'idproject' => $idProject,
         ]);
 
         } catch (Exception $e) {
@@ -229,6 +239,34 @@ class ProjectController extends Controller
         } catch (Exception $e) {
             return $e;
         }         
+    }
+      public function update_status_todo_project(Request $request){
+     DB::beginTransaction();
+        try {
+        DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+            'tl_status' => $request->status,
+        ]);
+
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+        ]);
+
+        } catch (Exception $e) {
+            return $e;
+        }         
+    }
+    public function getdata_project(Request $request){
+        $primary = DB::table('d_project')->where('p_creator',Auth::user()->us_id);
+        if($request->filter == null){
+            $project = $primary->where('p_name','LIKE', $request->filter .'%')->get();
+        }else{
+            $project = $primary->get();
+        }
+        return response()->json([
+            'project' => $project,
+        ]);
+
     }
     /**
      * Show the form for creating a new resource.

@@ -55,21 +55,21 @@ class ToDoController extends Controller
         try {
         
             $todo = new Todo;
-            if ($request->category != null) {
-            $todo->tl_category = $request->category;
-            }
-            if ($request->project != null) {
-            $todo->tl_project = $request->project;
+            $project = null;
+            if($request->category == '1'){
+                $project = $request->project;
             }
 
             $todo->tl_title         = $request->title;
+            $todo->tl_category      = $request->category;
+            $todo->tl_project       = $project;
             $todo->tl_desc          = $request->desc;
-            $todo->tl_status        = 'O';
+            $todo->tl_status        = 'Open';
             $todo->tl_progress      = 0;
             $todo->tl_planstart     = $request->planstart;
             $todo->tl_planend       = $request->planend;
-            $todo->tl_exestart      = Carbon::now();
-            $todo->tl_exeend        = Carbon::now();
+            $todo->tl_exestart      = null;
+            $todo->tl_exeend        = null;
             $todo->tl_created       = Carbon::now();
             $todo->tl_updated       = Carbon::now();
             $todo->save();
