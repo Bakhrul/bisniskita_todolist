@@ -17,7 +17,7 @@ class ToDoController extends Controller
      */
     public function category()
     {
-        $data = DB::table('m_category')->where('c_name','!=','Project')->orderBy('c_name','ASC')->get();
+        $data = DB::table('m_category')->orderBy('c_name','ASC')->get();
         $datas = array();
         foreach ($data as $key => $value) {
             $arr = [
