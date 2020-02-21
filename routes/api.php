@@ -26,6 +26,8 @@ Route::group(['middleware' => 'auth:api'], function(){
     //=============================|Todo|=========================================
     Route::get('/todo/{index}','ToDoController@index');
     Route::post('/todo/create','ToDoController@store');
+    Route::post('/actionpinned_todo','ToDoController@actionpinned_todo');
+    Route::post('/todolist_berbintang','ToDoController@todolist_berbintang');
     //=============================|Project|=========================================
     Route::get('/project','ProjectController@index');
     Route::post('/create_project','ProjectController@create_project');
@@ -37,5 +39,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/update_status_member_project','ProjectController@update_status_member_project');
     Route::post('/update_status_todo_project','ProjectController@update_status_todo_project');
     Route::post('/getdata_project','ProjectController@getdata_project');
+    Route::post('/filter_detail_project','ProjectController@filter_detail_project');
 
+    Route::post('/searc_todo_project','ToDoController@searc_todo_project');
 });

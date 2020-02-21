@@ -271,6 +271,24 @@ class ProjectController extends Controller
         ]);
 
     }
+    public function filter_detail_project(Request $request){
+         $getMember = DB::table('d_member_project')
+                    ->join('m_users','mp_user','us_id')
+                    ->join('m_roles','mp_role','r_id')
+                    ->where('mp_project',$request->project)
+                    ->where('us_name','LIKE', $request->filter .'%')
+                    ->get();
+
+        $getTodo = DB::table('d_todolist')
+                    ->where('tl_project',$request->project)
+                    ->where('tl_title','LIKE', $request->filter .'%')
+                    ->get();
+
+        return response()->json([
+            'member' => $getMember,
+            'todo' => $getTodo,
+        ]);
+    }
     /**
      * Show the form for creating a new resource.
      *
