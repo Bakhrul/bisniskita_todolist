@@ -43,6 +43,7 @@ class ProjectController extends Controller
         try {
         $idProject = DB::table('d_project')->max('p_id') + 1;
         DB::table('d_project')->insert([
+            'p_id' => $idProject,
             'p_name' => $request->nama_project,
             'p_creator' => Auth::user()->us_id,
             'p_timestart' => Carbon::parse($request->time_start),
