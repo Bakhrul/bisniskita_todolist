@@ -39,7 +39,7 @@ class ToDoController extends Controller
 
         if ($type == "1") {
 
-            $data = $data->where("tl_planstart" ,'<=', Carbon::today()->setTime(23,59,59))
+            $data = $data->where("tl_planstart" ,'<=', Carbon::now()->setTime(23,59,59))
             ->where("tl_planend" ,'>',Carbon::today())
             ->limit(5)->get();
 
@@ -117,13 +117,20 @@ class ToDoController extends Controller
             $todo->tl_desc          = $request->desc;
             $todo->tl_status        = 'Open';
             $todo->tl_progress      = 0;
-            $todo->tl_planstart     = $request->planstart;
-            $todo->tl_planend       = $request->planend;
+            $todo->tl_planstart     = Carbon::parse($request->planstart)->format('Y-m-d H:i:s');
+            $todo->tl_planend       = Carbon::parse($request->planend)->format('Y-m-d H:i:s');
             $todo->tl_exestart      = null;
             $todo->tl_exeend        = null;
             $todo->tl_created       = Carbon::now();
             $todo->tl_updated       = Carbon::now();
             $todo->save();
+
+            DB::table('d_todolist_roles')
+                ->insert([
+                    'tlr_users'     => Auth::user()->us_id,
+                    'tlr_todolist'  => $todo->tl_id,
+                    'tlr_role'      => 1
+                ]);
             DB::commit();
             return response()->json([
                 'status' => 'success'
