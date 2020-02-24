@@ -10,5 +10,11 @@ class Project extends Model
     public $timestamps =false;
     protected $primaryKey = 'p_id';
 
-     protected $fillable = ['*'];
+    protected $fillable = ['*'];
+
+     function todo()
+    {
+        return $this->hasMany('App\Todo');
+    }
+
 }

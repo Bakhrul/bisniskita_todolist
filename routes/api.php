@@ -26,6 +26,16 @@ Route::group(['middleware' => 'auth:api'], function(){
     //=============================|Todo|=========================================
     Route::get('/todo/{index}','ToDoController@index');
     Route::post('/todo/create','ToDoController@store');
+    Route::get('/todo/edit/{id}','ToDoController@edit');
+    Route::patch('/todo/update/{id}', 'ToDoController@update');
+
+    Route::get('/todo/search/peserta','ToDoController@getPesertaFilter');
+    Route::get('/todo/peserta/{todo}/{access}','ToDoController@getPeserta');
+    Route::post('/todo/peserta/create','ToDoController@storePeserta');
+    Route::delete('/todo/peserta/delete/{user}/{todo}','ToDoController@destroyPeserta');
+    //=============================|Project|=========================================
+    Route::get('/history', 'ToDoController@getHistory');
+
     //=============================|Project|=========================================
     Route::get('/project','ProjectController@index');
     Route::post('/create_project','ProjectController@create_project');
