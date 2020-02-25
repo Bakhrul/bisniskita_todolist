@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use Auth;
 use App\User;
 use App\todolistRole;
+use File;
+use App\Attachment;
 
 class ToDoController extends Controller
 {
@@ -326,7 +328,21 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
-        
+
+        $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
+        $ext = str_replace("'","",$ext);  
+        $image = $request->attachment;  // your base64 encoded
+        $image = str_replace('data:image/png;base64,', '', $image);
+        $image = str_replace(' ', '+', $image);
+        $imageName = date("Y-m-d h:i:s").'.'.$ext;
+        $path = storage_path(). '/files/' ;
+
+           if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0777, true, true);
+            }
+
+        \File::put($path . $imageName, base64_decode($image));
+
             $todo = new Todo;
             $project = null;
             if($request->category == '1'){
@@ -347,6 +363,11 @@ class ToDoController extends Controller
             $todo->tl_updated       = Carbon::now();
             $todo->save();
 
+            $attachment = new Attachment;
+            $attachment->tla_todolist =  $todo->tl_id;
+            $attachment->tla_path = $imageName;
+            $attachment->save();
+            
             DB::table('d_todolist_roles')
                 ->insert([
                     'tlr_users'     => Auth::user()->us_id,
