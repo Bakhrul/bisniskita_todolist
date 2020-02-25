@@ -381,7 +381,8 @@ class ToDoController extends Controller
                 ]);
             DB::commit();
             return response()->json([
-                'status' => 'success'
+                'status' => 'success',
+                'data' => $todo->tl_id,
             ]);
 
         } catch (Exception $e) {
@@ -506,12 +507,12 @@ class ToDoController extends Controller
             } catch (Exception $e) {
                 DB::rollback();
                 return $e;
-            }
-
-            }
-            }
+            }  
+        }          
         
     }
+}
+
 
     /**
      * Display the specified resource.
