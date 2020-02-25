@@ -356,7 +356,7 @@ class ToDoController extends Controller
             $todo->tl_updated       = Carbon::now();
             $todo->save();
 
-            if($request->attachment != null){
+            if($request->attachment != null || $request->attachment != '' || $request->attachment != 'null'){
                 $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
                 $ext = str_replace("'","",$ext);  
                 $image = $request->attachment;  // your base64 encoded
