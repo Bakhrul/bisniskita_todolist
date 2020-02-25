@@ -332,8 +332,8 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
-
-        $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
+        if($request->attachment != null){
+            $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
         $ext = str_replace("'","",$ext);  
         $image = $request->attachment;  // your base64 encoded
         $image = str_replace('data:image/png;base64,', '', $image);
@@ -345,6 +345,11 @@ class ToDoController extends Controller
                 File::makeDirectory($path, 0777, true, true);
             }
         file_put_contents(storage_path() ."/files/".$imageName, base64_decode($image));
+         $attachment = new Attachment;
+            $attachment->tla_todolist =  $todo->tl_id;
+            $attachment->tla_path = $imageName;
+            $attachment->save();
+        }
         // return response()->json(storage_path() ."/files/".$imageName);
         // \File::put($path . $imageName, base64_decode($image));
 
@@ -368,10 +373,6 @@ class ToDoController extends Controller
             $todo->tl_updated       = Carbon::now();
             $todo->save();
 
-            $attachment = new Attachment;
-            $attachment->tla_todolist =  $todo->tl_id;
-            $attachment->tla_path = $imageName;
-            $attachment->save();
             
             DB::table('d_todolist_roles')
                 ->insert([
