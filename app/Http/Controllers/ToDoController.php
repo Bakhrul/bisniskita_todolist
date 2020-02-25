@@ -26,6 +26,7 @@ class ToDoController extends Controller
             $q->leftJoin('d_project','tl_project','p_id');
         })->where('tlr_users',Auth::user()->us_id)
         ->groupBy('tl_project')->get();
+        
         $datas = array(
             
         );
@@ -333,19 +334,19 @@ class ToDoController extends Controller
         DB::BeginTransaction();
         try {
 
-        $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
-        $ext = str_replace("'","",$ext);  
-        $image = $request->attachment;  // your base64 encoded
-        $image = str_replace('data:image/png;base64,', '', $image);
-        $image = str_replace(' ', '+', $image);
-        $imageName = date("Y-m-d h:i:s").'.'.$ext;
-        $path = storage_path(). '/files/' ;
+        // $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
+        // $ext = str_replace("'","",$ext);  
+        // $image = $request->attachment;  // your base64 encoded
+        // $image = str_replace('data:image/png;base64,', '', $image);
+        // $image = str_replace(' ', '+', $image);
+        // $imageName = date("Y-m-d h:i:s").'.'.$ext;
+        // $path = storage_path(). '/files/' ;
 
-           if (!File::isDirectory($path)) {
-                File::makeDirectory($path, 0777, true, true);
-            }
+        //    if (!File::isDirectory($path)) {
+        //         File::makeDirectory($path, 0777, true, true);
+        //     }
 
-        \File::put($path . $imageName, base64_decode($image));
+        // \File::put($path . $imageName, base64_decode($image));
 
             $todo = new Todo;
             $project = null;
@@ -367,10 +368,10 @@ class ToDoController extends Controller
             $todo->tl_updated       = Carbon::now();
             $todo->save();
 
-            $attachment = new Attachment;
-            $attachment->tla_todolist =  $todo->tl_id;
-            $attachment->tla_path = $imageName;
-            $attachment->save();
+            // $attachment = new Attachment;
+            // $attachment->tla_todolist =  $todo->tl_id;
+            // $attachment->tla_path = $imageName;
+            // $attachment->save();
             
             DB::table('d_todolist_roles')
                 ->insert([
@@ -380,7 +381,8 @@ class ToDoController extends Controller
                 ]);
             DB::commit();
             return response()->json([
-                'status' => 'success'
+                'status' => 'success',
+                'data' => $todo->tl_id,
             ]);
 
         } catch (Exception $e) {
