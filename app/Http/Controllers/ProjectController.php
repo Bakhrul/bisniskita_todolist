@@ -289,6 +289,48 @@ class ProjectController extends Controller
             'todo' => $getTodo,
         ]);
     }
+    public function detail_project_all(Request $request){
+        $Project = DB::table('d_project')->where('p_id',$request->project)->first();
+        $Todo = DB::table('d_todolist')
+                ->leftJoin('d_todolist_important',function($join){
+                    $join->on('d_todolist.tl_id','=','d_todolist_important.tli_todolist')
+                        ->where('d_todolist_important.tli_users',Auth::user()->us_id);
+                })
+                ->where('tl_project',$request->project)
+                ->get();
+        $Member = DB::table('d_member_project')
+                ->where('mp_project',$request->project)
+                ->join('m_users','mp_user','us_id')
+                ->get();
+
+        $ProgressTodo = 0;
+        $ProgressProject = 0.00;
+        if(count($Todo) != null){
+            foreach ($Todo as $key => $value) {
+
+                $ProgressTodo += (int)$value->tl_progress;
+
+            }
+
+            $ProgressProject = round($ProgressTodo / count($Todo), 2);
+        }
+        
+
+        return response()->json([
+            'project' => $Project,
+            'todo' => $Todo,
+            'member' => $Member,
+            'progressproject' => $ProgressProject,
+        ]);
+    }
+    public function detail_member_project(Request $request){
+        $Member = DB::table('d_member_project')
+                 ->join('m_users','mp_user','us_id')
+                 ->where('mp_user',$request->member)
+                 ->where('mp_project',$request->project)
+                 ->first();
+        return response()->json($Member);
+    }
     /**
      * Show the form for creating a new resource.
      *

@@ -254,13 +254,17 @@ class ToDoController extends Controller
             'counttodo' => count($Todo),
         ]);
     }
-    public function searc_todo_project(Request $request){
+    public function search_todo_project(Request $request){
          $type = $request->filter;
 
         $Todo = DB::table('d_todolist')
                 ->join('d_todolist_roles',function($join){
                     $join->on('d_todolist.tl_id','=','d_todolist_roles.tlr_todolist')
                         ->where('d_todolist_roles.tlr_users',Auth::user()->us_id);
+                })
+                ->leftJoin('d_todolist_important',function($join){
+                    $join->on('d_todolist.tl_id','=','d_todolist_important.tli_todolist')
+                        ->where('d_todolist_important.tli_users',Auth::user()->us_id);
                 })
                 ->where('tl_title','LIKE', $request->search .'%');
         if ($type == "1") {
@@ -384,7 +388,28 @@ class ToDoController extends Controller
             return $e;
         }
         
+    }
+    public function detail_todo(Request $request){
+        $Todo = DB::table('d_todolist')
+                ->where('tl_id',$request->todolist)
+                ->first();
 
+        $member = DB::table('d_todolist_roles')
+                ->join('m_users','tlr_users','us_id')
+                ->where('tlr_todolist',$request->todolist)
+                ->get();
+
+        $TodoActivity = DB::table('d_todolist_timeline')
+                        ->join('m_users','tlt_user','us_id')
+                        ->where('tlt_todolist',$request->todolist)
+                        ->get();
+
+
+        return response()->json([
+            'todo' => $Todo,
+            'member' => $member,
+            'todo_activity' => $TodoActivity,
+        ]);
     }
 
     public function storePeserta(Request $request)
