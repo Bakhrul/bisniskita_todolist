@@ -341,9 +341,9 @@ class ToDoController extends Controller
         $imageName = date("Y_m_d_h_i_s").'.'.$ext;
         $path = storage_path(). '/files/' ;
 
-           // if (!File::isDirectory($path)) {
-           //      File::makeDirectory($path, 0777, true, true);
-           //  }
+           if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0777, true, true);
+            }
         file_put_contents(storage_path() ."/files/".$imageName, base64_decode($image));
         // return response()->json(storage_path() ."/files/".$imageName);
         // \File::put($path . $imageName, base64_decode($image));
