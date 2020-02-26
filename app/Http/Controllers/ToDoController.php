@@ -19,6 +19,24 @@ class ToDoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+     public function getFiles($todo)
+    {
+        $data = Attachment::where('tla_todolist',$todo)->orderBy('tla_id','ASC')->get();
+        
+        $datas = array();
+
+        foreach ($data as $key => $value) {
+            $arr = [
+                'id'    => $value->tla_id,
+                'todo'  => $value->tla_todolist,
+                'path'  => $value->tla_path
+            ];
+            array_push($datas, $arr);
+        }
+        return response()->json($datas);
+        
+    }
+
     public function getHistory()
     {
         $data = todolistRole::leftJoin('d_todolist',function($q){
@@ -64,7 +82,7 @@ class ToDoController extends Controller
 
     public function getPeserta($todo,$access)
     {
-        $idOwner=DB::table('d_todolist_roles')->where('tlr_todolist',$todo)->where('tlr_role','=','1')->value('tlr_users');
+        $roleUser=DB::table('d_todolist_roles')->where('tlr_todolist',$todo)->where('tlr_users','=',Auth::user()->us_id)->value('tlr_role');
         $data = User::leftJoin('d_todolist_roles','tlr_users','us_id')
         ->leftJoin('m_roles','tlr_role','r_id')
         ->where('tlr_todolist',$todo);
@@ -83,13 +101,12 @@ class ToDoController extends Controller
                 'email' => $value->us_email,
                 'access' => $value->r_name,
                 'todo' => $value->tlr_todolist,
-                'owner' => $idOwner,
             ];
             array_push($datas, $arr);
         }
         return response()->json([
             'users' => $datas,
-            'idowner' => $idOwner
+            'roleUser' => $roleUser
         ]);
     }
 
@@ -138,35 +155,39 @@ class ToDoController extends Controller
                         ->where('d_todolist_important.tli_users',Auth::user()->us_id);
                 })
                 ->where('tlr_users',Auth::user()->us_id);
+
         if ($type == "1") {
-            $data = $data->where("tl_planstart" ,'<=', Carbon::now('Asia/Jakarta')->setTime(23,59,59))
-            ->where("tl_planend" ,'>',Carbon::now('Asia/Jakarta'))
-            ->limit(5)->get();
+              $data = $data->where(function ($q) {
+        $q->where("tl_planstart", '>=', Carbon::today())
+            ->orWhere('tl_planend', '>=', Carbon::today())
+            ->Where('tl_planend', '<=', Carbon::now()->setTime(23, 59, 59));
+    })->limit(5)->get();
         }else if ($type == "2") {
             $data = $data->where(function($q){
-            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now('Asia/Jakarta')->addDays(4)])
-            ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(4)->setTime(23,59,59));
+            $q->where("tl_planstart" ,'>=',Carbon::tomorrow())
+            ->orWhere('tl_planend','>=',Carbon::tomorrow())
+            ->Where('tl_planend','<=', Carbon::tomorrow()->setTime(23,59,59));
             })->limit(5)->get();
         }else if ($type == "3") {
-            $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(5),Carbon::now('Asia/Jakarta')->addDays(13)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(5))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(13)->setTime(23,59,59));
+             $data = $data->where(function ($q) {
+            $q->where("tl_planstart", '>=', Carbon::tomorrow()->addDay())
+                ->orWhere('tl_planend', '>=', Carbon::tomorrow()->addDay())
+                ->Where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
             })->limit(5)->get();
+
         }else if ($type == "4") {
+            
             $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(13),Carbon::now('Asia/Jakarta')->addDays(32)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(13))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(32)->setTime(23,59,59));
-            })->limit(5)->get();
+              $q->whereBetween("tl_planstart" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)])
+            ->whereBetween("tl_planend" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
+            })->get();
         }
         else if ($type == "5") {
-            $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(33),Carbon::now('Asia/Jakarta')->addDays(62)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(33))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(62)->setTime(23,59,59));
-            })->limit(5)->get();
+           $data = $data->where(function ($q) {
+            $q->where("tl_planend", '<=', Carbon::now()->startOfWeek(Carbon::SUNDAY))->where('tl_progress','<',100);
+            })->get();
+
+
         }
 
         foreach ($data as $key => $value) {
@@ -396,6 +417,39 @@ class ToDoController extends Controller
         }
         
     }
+    public function store_attachment(Request $request)
+    {
+        $ext = pathinfo($request->pathname, PATHINFO_EXTENSION);
+        $ext = str_replace("'","",$ext);
+        $image = $request->file64; 
+        $image = str_replace('data:image/png;base64,', '', $image);
+        $image = str_replace(' ', '+', $image);
+        $withoutExt = preg_replace('/\\.[^.\\s]{3,4}$/', '', $request->filename);
+
+        $imageName = date("ymdhis").'_'.$withoutExt.'.'.$ext;
+        $path = storage_path(). '/files/' ;
+
+           if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0777, true, true);
+            }
+
+        \File::put($path . $imageName, base64_decode($image));
+        DB::BeginTransaction();
+        try {
+            $data = new Attachment;
+            $data->tla_path = $imageName;
+            $data->tla_todolist = $request->todo;
+            $data->save();
+            DB::commit();  
+            return response()->json([
+                'status' => 'success'
+            ]);  
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+       
+    }
+
     public function detail_todo(Request $request){
         $Todo = DB::table('d_todolist')
                 ->where('tl_id',$request->todolist)
@@ -696,5 +750,21 @@ class ToDoController extends Controller
             return $e;
         }
 
+    }
+
+    public function destroyFile($id)
+    {
+        DB::BeginTransaction();
+        try {
+            $data = Attachment::find($id);
+            unlink(storage_path('files/'.$data->tla_path));
+            $data->delete();
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        } catch (\Throwable $th) {
+            //throw $th;
+            DB::rollback();
+            return $th;
+        }
     }
 }
