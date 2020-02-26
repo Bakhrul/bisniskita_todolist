@@ -531,6 +531,22 @@ class ToDoController extends Controller
             return $e;
         }
     }
+    public function storeAction(Request $request)
+    {
+        DB::BeginTransaction();
+        try {
+            DB::table('d_todolist_action')->insert([
+                'tla_todolist' => $request->todo,
+                'tla_title' => $request->title,
+                'tla_created' => Carbon::now()
+            ]);
+            DB::Commit();
+            return response()->json(['status'=>'success']);
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+
+    }
     public function storePeserta(Request $request)
     {
         $us_id = $request->user;
@@ -545,6 +561,7 @@ class ToDoController extends Controller
         }elseif ($roles == 'Viewer') {
             $role = 4;
         }
+
         $todo = DB::table('d_todolist_roles')->where('tlr_todolist',$todos)->where('tlr_users',$us_id)->first();
         if ($todo == null) {
             DB::BeginTransaction();
@@ -553,7 +570,8 @@ class ToDoController extends Controller
                 ->insert([
                     'tlr_users'     => $us_id,
                     'tlr_todolist'  => $todos,
-                    'tlr_role'      => $role
+                    'tlr_role'      => $role,
+                    'tlr_own'      => $request->own
                 ]);
 
             DB::commit();
@@ -643,6 +661,27 @@ class ToDoController extends Controller
      * @param  \App\Todo  $todo
      * @return \Illuminate\Http\Response
      */
+    public function updateAction(Request $request,$id)
+    {
+        DB::BeginTransaction();
+        try {
+            $done = '';
+            if ($request->done == true) {
+                $done = Carbon::now();
+            }else{
+                $done = Null;
+            }
+            DB::Table('d_todolist_action')->where('tla_todolist',$request->todo)
+            ->where('tla_number',$id)->update([
+                'tla_done' => $done
+            ]);
+            DB::commit();
+            return response()->json(['status'=>'success']);
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
+
     public function update(Request $request,$id)
     {
         DB::BeginTransaction();

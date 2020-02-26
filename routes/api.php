@@ -37,6 +37,8 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('todo_edit/ganti_statusmember','ToDoController@todo_edit_ganti_statusmember');
 
     Route::get('/todo/list/actions','ToDoController@getTodoAction');
+    Route::post('/todo/list/actions','ToDoController@storeAction');
+    Route::patch('/todo/list/actions/{id}','ToDoController@updateAction');
     Route::get('/todo/search/peserta','ToDoController@getPesertaFilter');
     Route::get('/todo/peserta/{todo}/{access}','ToDoController@getPeserta');
     Route::post('/todo/peserta/create','ToDoController@storePeserta');
