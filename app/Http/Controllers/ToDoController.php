@@ -44,7 +44,6 @@ class ToDoController extends Controller
             $q->leftJoin('d_project','tl_project','p_id');
         })->where('tlr_users',Auth::user()->us_id)
         ->groupBy('tl_project')->get();
-        
         $datas = array(
             
         );
@@ -350,19 +349,8 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
-
-        // $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
-        // $ext = str_replace("'","",$ext);  
-        // $image = $request->attachment;  // your base64 encoded
-        // $image = str_replace('data:image/png;base64,', '', $image);
-        // $image = str_replace(' ', '+', $image);
-        // $imageName = date("Y-m-d h:i:s").'.'.$ext;
-        // $path = storage_path(). '/files/' ;
-
-        //    if (!File::isDirectory($path)) {
-        //         File::makeDirectory($path, 0777, true, true);
-        //     }
-
+       
+        // return response()->json(storage_path() ."/files/".$imageName);
         // \File::put($path . $imageName, base64_decode($image));
 
             $todo = new Todo;
@@ -385,10 +373,26 @@ class ToDoController extends Controller
             $todo->tl_updated       = Carbon::now();
             $todo->save();
 
-            // $attachment = new Attachment;
-            // $attachment->tla_todolist =  $todo->tl_id;
-            // $attachment->tla_path = $imageName;
-            // $attachment->save();
+            if($request->attachment != null || $request->attachment != '' || $request->attachment != 'null'){
+                $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
+                $ext = str_replace("'","",$ext);  
+                $image = $request->attachment;  // your base64 encoded
+                $image = str_replace('data:image/png;base64,', '', $image);
+                $image = str_replace(' ', '+', $image);
+                $imageName = date("Y_m_d_h_i_s").'.'.$ext;
+                $path = storage_path(). '/files/' ;
+
+               if (!File::isDirectory($path)) {
+                    File::makeDirectory($path, 0777, true, true);
+                }
+
+                file_put_contents(storage_path() ."/files/".$imageName, base64_decode($image));
+                $attachment = new Attachment;
+                $attachment->tla_todolist =  $todo->tl_id;
+                $attachment->tla_path = $imageName;
+                $attachment->save();
+            }
+
             
             DB::table('d_todolist_roles')
                 ->insert([
@@ -454,16 +458,50 @@ class ToDoController extends Controller
         $TodoActivity = DB::table('d_todolist_timeline')
                         ->join('m_users','tlt_user','us_id')
                         ->where('tlt_todolist',$request->todolist)
+                        ->orderBy('tlt_id','Desc')
                         ->get();
 
+        $TodoFile = DB::table('d_todolist_attachment')->where('tla_todolist',$request->todolist)->get();
 
         return response()->json([
             'todo' => $Todo,
-            'member' => $member,
+            'todo_member' => $member,
             'todo_activity' => $TodoActivity,
+            'todo_file' => $TodoFile,
         ]);
     }
+    public function detail_member_todo(Request $request){
+         $Member = DB::table('d_todolist_roles')
+                 ->join('m_users','tlr_users','us_id')
+                 ->where('tlr_users',$request->member)
+                 ->where('tlr_todolist',$request->todo)
+                 ->first();
+        return response()->json($Member);
+    }
+    public function realisasi_todo(Request $request){
+        DB::BeginTransaction();
+        try {
+             
+            DB::table('d_todolist_timeline')->insert([
+                'tlt_todolist' => $request->todolist,
+                'tlt_user' => Auth::user()->us_id,
+                'tlt_progress' => $request->progress,
+                'tlt_note' => $request->catatan,
+                'tlt_created'=> Carbon::now('Asia/Jakarta'),
+            ]);
+            DB::table('d_todolist')->where('tl_id',$request->todolist)->update([
+                'tl_progress' => $request->progress,
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
 
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
     public function storePeserta(Request $request)
     {
         $us_id = $request->user;
@@ -523,12 +561,12 @@ class ToDoController extends Controller
             } catch (Exception $e) {
                 DB::rollback();
                 return $e;
-            }
-
-            }
-            }
+            }  
+        }          
         
     }
+}
+
 
     /**
      * Display the specified resource.

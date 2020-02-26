@@ -36,6 +36,8 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/todo/peserta/create','ToDoController@storePeserta');
     Route::delete('/todo/peserta/delete/{user}/{todo}','ToDoController@destroyPeserta');
     Route::delete('/todo/attachment/{id}', 'ToDoController@destroyFile');
+    Route::post('/detail_member_todo','ToDoController@detail_member_todo');
+    Route::post('/realisasi_todo','ToDoController@realisasi_todo');
 
     //=============================|Project|=========================================
     Route::get('/history', 'ToDoController@getHistory');
