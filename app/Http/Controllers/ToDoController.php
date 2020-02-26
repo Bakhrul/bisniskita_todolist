@@ -60,8 +60,7 @@ class ToDoController extends Controller
         $data = todolistRole::leftJoin('d_todolist',function($q){
             $q->on('tlr_todolist','tl_id');
             $q->leftJoin('d_project','tl_project','p_id');
-        })->where('tlr_users',Auth::user()->us_id)
-        ->groupBy('tl_project')->get();
+        })->where('tlr_users',Auth::user()->us_id)->groupBy('tl_id')->get();
         $datas = array(
             
         );
@@ -103,7 +102,9 @@ class ToDoController extends Controller
         $roleUser=DB::table('d_todolist_roles')->where('tlr_todolist',$todo)->where('tlr_users','=',Auth::user()->us_id)->value('tlr_role');
         $data = User::leftJoin('d_todolist_roles','tlr_users','us_id')
         ->leftJoin('m_roles','tlr_role','r_id')
-        ->where('tlr_todolist',$todo);
+        ->where('tlr_todolist',$todo)
+        ->orderBy('tlr_role','ASC')
+        ->groupBy('tlr_users');
         // dd($data->get());
         if ($access == '1') {
             $data = $data->get();
@@ -175,18 +176,20 @@ class ToDoController extends Controller
         $type = $index;
         $todos = array();
         $data = Todo::orderBy('tl_planstart','ASC')
-                ->leftJoin('d_todolist_roles','tlr_todolist','tl_id')
+                ->join('d_todolist_roles','tlr_todolist','tl_id')
                 ->leftJoin('d_todolist_important',function($join){
                     $join->on('d_todolist.tl_id','=','d_todolist_important.tli_todolist')
                         ->where('d_todolist_important.tli_users',Auth::user()->us_id);
                 })
-                ->where('tlr_users',Auth::user()->us_id);
+                ->where('tlr_users',Auth::user()->us_id)
+                ->groupBy('tl_id');
+                
 
         if ($type == "1") {
               $data = $data->where(function ($q) {
         $q->where("tl_planstart", '>=', Carbon::today())
             ->orWhere('tl_planend', '>=', Carbon::today())
-            ->Where('tl_planend', '<=', Carbon::now()->setTime(23, 59, 59));
+            ->Where('tl_planend', '<=', Carbon::now('Asia/Jakarta')->setTime(23, 59, 59));
     })->limit(5)->get();
         }else if ($type == "2") {
             $data = $data->where(function($q){
@@ -264,53 +267,63 @@ class ToDoController extends Controller
     public function todolist_berbintang(Request $request){
         $type = $request->filter;
 
-        $Todo = DB::table('d_todolist_important')
+        $data = DB::table('d_todolist_important')
                 ->join('d_todolist_roles',function($join){
                     $join->on('d_todolist_important.tli_todolist','=','d_todolist_roles.tlr_todolist')
                         ->where('d_todolist_roles.tlr_users',Auth::user()->us_id);
                 })
                 ->join('d_todolist','tli_todolist','tl_id')
-                ->where('tl_title','LIKE', $request->search .'%');
+                ->where('tl_title','LIKE', $request->search .'%')
+                  ->groupBy('tl_id');
+        
         if ($type == "1") {
-            $Todo = $Todo->where("tl_planstart" ,'<=', Carbon::now('Asia/Jakarta')->setTime(23,59,59))
-            ->where("tl_planend" ,'>',Carbon::now('Asia/Jakarta'))
-            ->get();
-
+              $data = $data->where(function ($q) {
+        $q->where("tl_planstart", '>=', Carbon::today())
+            ->orWhere('tl_planend', '>=', Carbon::today())
+            ->Where('tl_planend', '<=', Carbon::now('Asia/Jakarta')->setTime(23, 59, 59));
+    })->limit(5)->get();
         }else if ($type == "2") {
-            $Todo = $Todo->where(function($q){
-            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now('Asia/Jakarta')->addDays(4)])
-            ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(4)->setTime(23,59,59));
-            })->get();
+            $data = $data->where(function($q){
+            $q->where("tl_planstart" ,'>=',Carbon::tomorrow())
+            ->orWhere('tl_planend','>=',Carbon::tomorrow())
+            ->Where('tl_planend','<=', Carbon::tomorrow()->setTime(23,59,59));
+            })->limit(5)->get();
         }else if ($type == "3") {
-            $Todo = $Todo->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(5),Carbon::now('Asia/Jakarta')->addDays(13)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(5))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(13)->setTime(23,59,59));
-            })->get();
+             $data = $data->where(function ($q) {
+            $q->where("tl_planstart", '>=', Carbon::tomorrow()->addDay())
+                ->orWhere('tl_planend', '>=', Carbon::tomorrow()->addDay())
+                ->Where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
+            })->limit(5)->get();
+
         }else if ($type == "4") {
-            $Todo = $Todo->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(13),Carbon::now('Asia/Jakarta')->addDays(32)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(13))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(32)->setTime(23,59,59));
+            
+            $data = $data->where(function($q){
+              $q->whereBetween("tl_planstart" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)])
+            ->whereBetween("tl_planend" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
             })->get();
         }
         else if ($type == "5") {
-            $Todo = $Todo->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(33),Carbon::now('Asia/Jakarta')->addDays(62)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(33))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(62)->setTime(23,59,59));
+           $data = $data->where(function ($q) {
+            $q->whereMonth("tl_planstart", '<=', Carbon::now()->month)->orWhereMonth('tl_planend','>=',Carbon::now()->month);
             })->get();
+
+        }else {
+
+           $data = $data->where(function ($q) {
+            $q->whereMonth("tl_planend", '<', Carbon::now()->month)->where('tl_progress','<',100);
+            })->get();
+
+
         }
         return response()->json([
-            'todo' => $Todo,
-            'counttodo' => count($Todo),
+            'todo' => $data,
+            'counttodo' => count($data),
         ]);
     }
     public function search_todo_project(Request $request){
          $type = $request->filter;
 
-        $Todo = DB::table('d_todolist')
+        $data = DB::table('d_todolist')
                 ->join('d_todolist_roles',function($join){
                     $join->on('d_todolist.tl_id','=','d_todolist_roles.tlr_todolist')
                         ->where('d_todolist_roles.tlr_users',Auth::user()->us_id);
@@ -319,37 +332,46 @@ class ToDoController extends Controller
                     $join->on('d_todolist.tl_id','=','d_todolist_important.tli_todolist')
                         ->where('d_todolist_important.tli_users',Auth::user()->us_id);
                 })
-                ->where('tl_title','LIKE', $request->search .'%');
-        if ($type == "1") {
-            $Todo = $Todo->where("tl_planstart" ,'<=', Carbon::now('Asia/Jakarta')->setTime(23,59,59))
-            ->where("tl_planend" ,'>',Carbon::now('Asia/Jakarta'))
-            ->get();
-
+                ->where('tl_title','LIKE', $request->search .'%')
+               ->groupBy('tl_id');
+          if ($type == "1") {
+              $data = $data->where(function ($q) {
+        $q->where("tl_planstart", '>=', Carbon::today())
+            ->orWhere('tl_planend', '>=', Carbon::today())
+            ->Where('tl_planend', '<=', Carbon::now('Asia/Jakarta')->setTime(23, 59, 59));
+    })->limit(5)->get();
         }else if ($type == "2") {
-            $Todo = $Todo->where(function($q){
-            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now('Asia/Jakarta')->addDays(4)])
-            ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(4)->setTime(23,59,59));
-            })->get();
+            $data = $data->where(function($q){
+            $q->where("tl_planstart" ,'>=',Carbon::tomorrow())
+            ->orWhere('tl_planend','>=',Carbon::tomorrow())
+            ->Where('tl_planend','<=', Carbon::tomorrow()->setTime(23,59,59));
+            })->limit(5)->get();
         }else if ($type == "3") {
-            $Todo = $Todo->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(5),Carbon::now('Asia/Jakarta')->addDays(13)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(5))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(13)->setTime(23,59,59));
-            })->get();
+             $data = $data->where(function ($q) {
+            $q->where("tl_planstart", '>=', Carbon::tomorrow()->addDay())
+                ->orWhere('tl_planend', '>=', Carbon::tomorrow()->addDay())
+                ->Where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
+            })->limit(5)->get();
+
         }else if ($type == "4") {
-            $Todo = $Todo->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(13),Carbon::now('Asia/Jakarta')->addDays(32)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(13))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(32)->setTime(23,59,59));
+            
+            $data = $data->where(function($q){
+              $q->whereBetween("tl_planstart" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)])
+            ->whereBetween("tl_planend" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
             })->get();
         }
         else if ($type == "5") {
-            $Todo = $Todo->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(33),Carbon::now('Asia/Jakarta')->addDays(62)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(33))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(62)->setTime(23,59,59));
+           $data = $data->where(function ($q) {
+            $q->whereMonth("tl_planstart", '<=', Carbon::now()->month)->orWhereMonth('tl_planend','>=',Carbon::now()->month);
             })->get();
+
+        }else {
+
+           $data = $data->where(function ($q) {
+            $q->whereMonth("tl_planend", '<', Carbon::now()->month)->where('tl_progress','<',100);
+            })->get();
+
+
         }
         
         $Project = DB::table('d_project_member')
@@ -359,8 +381,8 @@ class ToDoController extends Controller
                     ->get();
 
         return response()->json([
-            'todo' => $Todo,
-            'counttodo' => count($Todo),
+            'todo' => $data,
+            'counttodo' => count($data),
             'project' => $Project,
             'countproject' => count($Project),
         ]);   
@@ -407,29 +429,6 @@ class ToDoController extends Controller
             $todo->tl_created       = Carbon::now();
             $todo->tl_updated       = Carbon::now();
             $todo->save();
-
-            if( $request->attachment != 'kosong' ){
-      
-
-                $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
-                $ext = str_replace("'","",$ext);  
-                $image = $request->attachment;  // your base64 encoded
-                $image = str_replace('data:image/png;base64,', '', $image);
-                $image = str_replace(' ', '+', $image);
-                $imageName = date("Y_m_d_h_i_s").'.'.$ext;
-                $path = storage_path(). '/files/' ;
-
-               if (!File::isDirectory($path)) {
-                    File::makeDirectory($path, 0777, true, true);
-                }
-
-                file_put_contents(storage_path() ."/files/".$imageName, base64_decode($image));
-                $attachment = new Attachment;
-                $attachment->tla_todolist =  $todo->tl_id;
-                $attachment->tla_path = $imageName;
-                $attachment->save();
-            }
-
             
             DB::table('d_todolist_roles')
                 ->insert([
@@ -437,6 +436,17 @@ class ToDoController extends Controller
                     'tlr_todolist'  => $todo->tl_id,
                     'tlr_role'      => 1
                 ]);
+            if($request->category == '1'){
+                $memberProject = DB::table('d_project_member')->where('mp_project',$request->project)->get();
+                foreach ($memberProject as $key => $value) {
+                    DB::table('d_todolist_roles')->insert([
+                        'tlr_users' => $value->mp_user,
+                        'tlr_todolist' => $todo->tl_id,
+                        'tlr_role' => $value->mp_role,
+                        'tlr_own' => 'P',
+                    ]);
+                }
+            }
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -492,6 +502,8 @@ class ToDoController extends Controller
         $member = DB::table('d_todolist_roles')
                 ->join('m_users','tlr_users','us_id')
                 ->where('tlr_todolist',$request->todolist)
+                ->orderBy('tlr_role')
+                ->groupBy('tlr_users')
                 ->get();
 
         $TodoActivity = DB::table('d_todolist_timeline')
@@ -634,6 +646,8 @@ class ToDoController extends Controller
                     ->join('m_users','tlr_users','us_id')
                     ->join('m_roles','tlr_role','r_id')
                     ->where('tlr_todolist',$id)
+                    ->orderBy('tlr_role')
+                    ->groupBy('tlr_users')
                     ->get();
         $documentTodo = DB::table('d_todolist_attachment')
                         ->where('tla_todolist',$id)
@@ -694,9 +708,10 @@ class ToDoController extends Controller
                                 ->where('tlr_own','P')
                                 ->where('tlr_role','!=',1)
                                 ->delete();
-            DB::table('d_todolist_roles')->where('tlr_own','P')->delete();
+            
             $projetLeader = DB::table('d_todolist_roles')->where('tlr_own','P')->where('tlr_role',1)->get();
             foreach ($projetLeader as $key => $value) {
+                DB::table('d_todolist_roles')->where('tlr_users',$value->tlr_users)->where('tlr_todolist',$id)->delete();
                 DB::table('d_todolist_roles')->insert([
                     'tlr_own' => 'T',
                     'tlr_users' => $value->tlr_users,

@@ -22,15 +22,15 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        $data = Project::orderBy('p_id','ASC')->limit(3)->get();
+        $data = DB::table('d_project_member')->join('d_project','mp_project','p_id')->where('mp_user',Auth::user()->us_id)->orderBy('p_id','ASC')->get();
         $datas = array();
 
         foreach($data as $value){
             $arr = [
                 'id'    => $value->p_id,
                 'title' => $value->p_name,
-                'start' => $value->p_time_start,
-                'end'   => $value->p_time_end,
+                'start' => $value->p_timestart,
+                'end'   => $value->p_timeend,
                 'status' => $value->p_status
             ];
             array_push($datas,$arr);
@@ -119,6 +119,7 @@ class ProjectController extends Controller
                         'tlr_users' => $cekUser->us_id,
                         'tlr_todolist' => $value->tl_id,
                         'tlr_role' => $request->status,
+                        'tlr_own' => 'P',
                     ]);
                 }
             }else{
@@ -153,6 +154,7 @@ class ProjectController extends Controller
             'tl_desc' => $request->deskripsi,
             'tl_status' => 'Open',
             'tl_progress' => 0,
+            'tl_allday' => 0,
             'tl_planstart' => Carbon::parse($request->tanggal_awal)->format('Y-m-d H:i:s'),
             'tl_planend' => Carbon::parse($request->tanggal_akhir)->format('Y-m-d H:i:s'),
             'tl_created' => Carbon::now('Asia/Jakarta'),
@@ -166,6 +168,7 @@ class ProjectController extends Controller
                 'tlr_users' => $value->mp_user,
                 'tlr_todolist' => $maxIdTodo,
                 'tlr_role' => $value->mp_role,
+                'tlr_own' => 'P',
             ]);
         }
 
@@ -186,7 +189,7 @@ class ProjectController extends Controller
         $getTodo = DB::table('d_todolist')->where('tl_project',$request->project)->get();
 
         foreach ($getTodo as $key => $value) {
-            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->delete();
+            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->where('tlr_own','P')->delete();
         }
 
         DB::commit();
@@ -260,7 +263,8 @@ class ProjectController extends Controller
         }         
     }
     public function getdata_project(Request $request){
-        $primary = DB::table('d_project')->where('p_creator',Auth::user()->us_id);
+        $primary =
+         DB::table('d_project_member')->join('d_project','mp_project','p_id')->where('mp_user',Auth::user()->us_id)->groupBy('p_id');
         if($request->filter == null){
             $project = $primary->where('p_name','LIKE', $request->filter .'%')->get();
         }else{

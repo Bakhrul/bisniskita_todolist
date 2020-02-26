@@ -18,7 +18,13 @@ class KategoriController extends Controller
     public function tambah_kategori(Request $request){
     	DB::BeginTransaction();
     	try{
-
+    		$cekData  = Kategori::where('c_name',$request->nama_kategori)->where('c_user',null)->first();
+    		$cekFromUser = Kategori::where('c_name',$request->nama_kategori)->where('c_user',Auth::user()->us_id)->first();
+    		if($cekData != null || $cekFromUser != null){
+    			return response()->json([
+    				'status' => 'sudah ada',
+    			]);
+    		}
     		$Kategori  = new Kategori;
     		$Kategori->c_name = $request->nama_kategori;
     		$Kategori->c_user = Auth::user()->us_id;
