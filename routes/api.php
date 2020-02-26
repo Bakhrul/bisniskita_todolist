@@ -35,6 +35,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('todo_edit/tambah_member','ToDoController@todo_edit_addmember');
     Route::post('todo_edit/delete_member','ToDoController@todo_edit_deletemember');
     Route::post('todo_edit/ganti_statusmember','ToDoController@todo_edit_ganti_statusmember');
+    Route::post('todo_edit/tambah_file','ToDoController@store_attachment');
 
     Route::get('/todo/list/actions','ToDoController@getTodoAction');
     Route::post('/todo/list/actions','ToDoController@storeAction');
