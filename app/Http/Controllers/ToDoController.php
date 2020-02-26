@@ -155,35 +155,39 @@ class ToDoController extends Controller
                         ->where('d_todolist_important.tli_users',Auth::user()->us_id);
                 })
                 ->where('tlr_users',Auth::user()->us_id);
+
         if ($type == "1") {
-            $data = $data->where("tl_planstart" ,'<=', Carbon::now('Asia/Jakarta')->setTime(23,59,59))
-            ->where("tl_planend" ,'>',Carbon::now('Asia/Jakarta'))
-            ->limit(5)->get();
+              $data = $data->where(function ($q) {
+        $q->where("tl_planstart", '>=', Carbon::today())
+            ->orWhere('tl_planend', '>=', Carbon::today())
+            ->Where('tl_planend', '<=', Carbon::now()->setTime(23, 59, 59));
+    })->limit(5)->get();
         }else if ($type == "2") {
             $data = $data->where(function($q){
-            $q->whereBetween("tl_planstart" ,[Carbon::tomorrow(),Carbon::now('Asia/Jakarta')->addDays(4)])
-            ->orWhere("tl_planend" ,'>',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(4)->setTime(23,59,59));
+            $q->where("tl_planstart" ,'>=',Carbon::tomorrow())
+            ->orWhere('tl_planend','>=',Carbon::tomorrow())
+            ->Where('tl_planend','<=', Carbon::tomorrow()->setTime(23,59,59));
             })->limit(5)->get();
         }else if ($type == "3") {
-            $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(5),Carbon::now('Asia/Jakarta')->addDays(13)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(5))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(13)->setTime(23,59,59));
+             $data = $data->where(function ($q) {
+            $q->where("tl_planstart", '>=', Carbon::tomorrow()->addDay())
+                ->orWhere('tl_planend', '>=', Carbon::tomorrow()->addDay())
+                ->Where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
             })->limit(5)->get();
+
         }else if ($type == "4") {
+            
             $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(13),Carbon::now('Asia/Jakarta')->addDays(32)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(13))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(32)->setTime(23,59,59));
-            })->limit(5)->get();
+              $q->whereBetween("tl_planstart" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)])
+            ->whereBetween("tl_planend" ,[Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
+            })->get();
         }
         else if ($type == "5") {
-            $data = $data->where(function($q){
-              $q->whereBetween("tl_planstart" ,[Carbon::now('Asia/Jakarta')->addDays(33),Carbon::now('Asia/Jakarta')->addDays(62)])
-            ->orWhere("tl_planend" ,'>',Carbon::now('Asia/Jakarta')->addDays(33))
-            ->Where('tl_planend','<=', Carbon::now('Asia/Jakarta')->addDays(62)->setTime(23,59,59));
-            })->limit(5)->get();
+           $data = $data->where(function ($q) {
+            $q->where("tl_planend", '<=', Carbon::now()->startOfWeek(Carbon::SUNDAY))->where('tl_progress','<',100);
+            })->get();
+
+
         }
 
         foreach ($data as $key => $value) {
