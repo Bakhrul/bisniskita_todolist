@@ -335,7 +335,6 @@ class ToDoController extends Controller
        
         // return response()->json(storage_path() ."/files/".$imageName);
         // \File::put($path . $imageName, base64_decode($image));
-
             $todo = new Todo;
             $project = null;
             if($request->category == '1'){
@@ -356,7 +355,9 @@ class ToDoController extends Controller
             $todo->tl_updated       = Carbon::now();
             $todo->save();
 
-            if($request->attachment != null || $request->attachment != '' || $request->attachment != 'null'){
+            if( $request->attachment != 'kosong' ){
+      
+
                 $ext = pathinfo($request->fileextension, PATHINFO_EXTENSION);
                 $ext = str_replace("'","",$ext);  
                 $image = $request->attachment;  // your base64 encoded
@@ -538,21 +539,22 @@ class ToDoController extends Controller
     public function edit($id)
     {
        
-        $todo = Todo::where('tl_id',$id)->join('m_category','tl_category','c_id')->first();
-
-        $datas = [
-            'id'            =>$todo->tl_id,
-            'category_id'   =>$todo->tl_category,
-            'category_name' =>$todo->c_name,
-            'project'       =>$todo->tl_project,
-            'title'         =>$todo->tl_title,
-            'desc'          =>$todo->tl_desc,
-            'status'        =>$todo->tl_status,
-            'progress'      =>$todo->tl_progress,
-            'planstart'     =>$todo->tl_planstart,
-            'plnend'        =>$todo->tl_planend,
-        ];
-        return response()->json($datas);
+        $todo = Todo::where('tl_id',$id)
+                ->join('m_category','tl_category','c_id')
+                ->first();
+        $MemberTodo = DB::table('d_todolist_roles')
+                    ->join('m_users','tlr_users','us_id')
+                    ->join('m_roles','tlr_role','r_id')
+                    ->where('tlr_todolist',$id)
+                    ->get();
+        $documentTodo = DB::table('d_todolist_attachment')
+                        ->where('tla_todolist',$id)
+                        ->get();
+        return response()->json([
+            'todo' => $todo,
+            'member_todo' => $MemberTodo,
+            'document_todo' => $documentTodo,
+        ]);
         
     }
 
@@ -596,6 +598,75 @@ class ToDoController extends Controller
             return $e;
         }
     }
+    public function todo_edit_addmember(Request $request){
+        DB::BeginTransaction();
+        try {
+            
+            $cekUser = DB::table('m_users')->where('us_email',$request->member)->first();
+            if($cekUser == null){
+                return response()->json([
+                    'status' => 'email belum terdaftar',
+                ]);
+            }
+
+            $cekMember = DB::table('d_todolist_roles')->where('tlr_users',$cekUser->us_id)->where('tlr_todolist',$request->todolist)->first();
+            if($cekMember != null){
+                return response()->json([
+                    'status' => 'member sudah terdaftar',
+                ]);
+            }
+            DB::table('d_todolist_roles')->where('tlr_users',$cekUser->us_id)->where('tlr_todolist',$request->todolist)->where('tlr_own','T')->delete();
+            DB::table('d_todolist_roles')->insert([
+                'tlr_users' => $cekUser->us_id,
+                'tlr_todolist' => $request->todolist,
+                'tlr_role' => $request->role,
+                'tlr_own' => 'T',
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+      public function todo_edit_deletemember(Request $request){
+        DB::BeginTransaction();
+        try {
+            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$request->todolist)->where('tlr_own','T')->delete();
+            DB::table('d_todolist_important')->where('tli_users',$request->member)->where('tli_todolist',$request->todolist)->delete();
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function todo_edit_ganti_statusmember(Request $request){
+        DB::BeginTransaction();
+        try {
+            DB::table('d_todolist_roles')
+            ->where('tlr_users',$request->member)
+            ->where('tlr_todolist',$request->todolist)
+            ->where('tlr_own','T')
+            ->update([
+                'tlr_role' => $request->role,
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+
 
     /**
      * Remove the specified resource from storage.

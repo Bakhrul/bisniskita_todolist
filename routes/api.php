@@ -22,12 +22,17 @@ Route::group(['middleware' => 'auth:api'], function(){
     //=============================|End|=========================================
     //=============================|Category|=========================================
     Route::get('/category','ToDoController@category');
+    Route::post('/tambah_kategori','KategoriController@tambah_kategori');
 
     //=============================|Todo|=========================================
     Route::get('/todo/{index}','ToDoController@index');
     Route::post('/todo/create','ToDoController@store');
     Route::get('/todo/edit/{id}','ToDoController@edit');
     Route::patch('/todo/update/{id}', 'ToDoController@update');
+
+    Route::post('todo_edit/tambah_member','ToDoController@todo_edit_addmember');
+    Route::post('todo_edit/delete_member','ToDoController@todo_edit_deletemember');
+    Route::post('todo_edit/ganti_statusmember','ToDoController@todo_edit_ganti_statusmember');
 
     Route::get('/todo/search/peserta','ToDoController@getPesertaFilter');
     Route::get('/todo/peserta/{todo}/{access}','ToDoController@getPeserta');
