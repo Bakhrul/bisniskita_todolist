@@ -19,6 +19,24 @@ class ToDoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    public function getTodoAction()
+    {
+        $data = DB::table('d_todolist_action')->join('d_todolist','tla_todolist','tl_id')->get();
+        $datas = array();
+        foreach ($data as $key => $value) {
+            $arr = [
+                'id' => $value->tla_number,
+                'todo' => $value->tla_todolist,
+                'title' => $value->tla_title,
+                'created'=> $value->tl_created,
+                'done' => $value->tla_done
+
+            ];
+            array_push($datas,$arr);
+        }
+        return response()->json($datas);
+    }
+
      public function getFiles($todo)
     {
         $data = Attachment::where('tla_todolist',$todo)->orderBy('tla_id','ASC')->get();
@@ -184,7 +202,13 @@ class ToDoController extends Controller
         }
         else if ($type == "5") {
            $data = $data->where(function ($q) {
-            $q->where("tl_planend", '<=', Carbon::now()->startOfWeek(Carbon::SUNDAY))->where('tl_progress','<',100);
+            $q->whereMonth("tl_planstart", '<=', Carbon::now()->month)->orWhereMonth('tl_planend','>=',Carbon::now()->month);
+            })->get();
+
+        }else {
+
+           $data = $data->where(function ($q) {
+            $q->whereMonth("tl_planend", '<', Carbon::now()->month)->where('tl_progress','<',100);
             })->get();
 
 
