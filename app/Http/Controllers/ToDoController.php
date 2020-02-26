@@ -19,6 +19,24 @@ class ToDoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+     public function getFiles($todo)
+    {
+        $data = Attachment::where('tla_todolist',$todo)->orderBy('tla_id','ASC')->get();
+        
+        $datas = array();
+
+        foreach ($data as $key => $value) {
+            $arr = [
+                'id'    => $value->tla_id,
+                'todo'  => $value->tla_todolist,
+                'path'  => $value->tla_path
+            ];
+            array_push($datas, $arr);
+        }
+        return response()->json($datas);
+        
+    }
+
     public function getHistory()
     {
         $data = todolistRole::leftJoin('d_todolist',function($q){
@@ -65,7 +83,7 @@ class ToDoController extends Controller
 
     public function getPeserta($todo,$access)
     {
-        $idOwner=DB::table('d_todolist_roles')->where('tlr_todolist',$todo)->where('tlr_role','=','1')->value('tlr_users');
+        $roleUser=DB::table('d_todolist_roles')->where('tlr_todolist',$todo)->where('tlr_users','=',Auth::user()->us_id)->value('tlr_role');
         $data = User::leftJoin('d_todolist_roles','tlr_users','us_id')
         ->leftJoin('m_roles','tlr_role','r_id')
         ->where('tlr_todolist',$todo);
@@ -84,13 +102,12 @@ class ToDoController extends Controller
                 'email' => $value->us_email,
                 'access' => $value->r_name,
                 'todo' => $value->tlr_todolist,
-                'owner' => $idOwner,
             ];
             array_push($datas, $arr);
         }
         return response()->json([
             'users' => $datas,
-            'idowner' => $idOwner
+            'roleUser' => $roleUser
         ]);
     }
 
@@ -391,6 +408,39 @@ class ToDoController extends Controller
         }
         
     }
+    public function store_attachment(Request $request)
+    {
+        $ext = pathinfo($request->pathname, PATHINFO_EXTENSION);
+        $ext = str_replace("'","",$ext);
+        $image = $request->file64; 
+        $image = str_replace('data:image/png;base64,', '', $image);
+        $image = str_replace(' ', '+', $image);
+        $withoutExt = preg_replace('/\\.[^.\\s]{3,4}$/', '', $request->filename);
+
+        $imageName = date("ymdhis").'_'.$withoutExt.'.'.$ext;
+        $path = storage_path(). '/files/' ;
+
+           if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0777, true, true);
+            }
+
+        \File::put($path . $imageName, base64_decode($image));
+        DB::BeginTransaction();
+        try {
+            $data = new Attachment;
+            $data->tla_path = $imageName;
+            $data->tla_todolist = $request->todo;
+            $data->save();
+            DB::commit();  
+            return response()->json([
+                'status' => 'success'
+            ]);  
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+       
+    }
+
     public function detail_todo(Request $request){
         $Todo = DB::table('d_todolist')
                 ->where('tl_id',$request->todolist)
@@ -587,5 +637,21 @@ class ToDoController extends Controller
             return $e;
         }
 
+    }
+
+    public function destroyFile($id)
+    {
+        DB::BeginTransaction();
+        try {
+            $data = Attachment::find($id);
+            unlink(storage_path('files/'.$data->tla_path));
+            $data->delete();
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        } catch (\Throwable $th) {
+            //throw $th;
+            DB::rollback();
+            return $th;
+        }
     }
 }

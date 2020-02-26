@@ -25,6 +25,8 @@ Route::group(['middleware' => 'auth:api'], function(){
 
     //=============================|Todo|=========================================
     Route::get('/todo/{index}','ToDoController@index');
+    Route::get('/todo/attachment/{todo}','ToDoController@getFiles');
+    Route::post('/todo/attachment','ToDoController@store_attachment');
     Route::post('/todo/create','ToDoController@store');
     Route::get('/todo/edit/{id}','ToDoController@edit');
     Route::patch('/todo/update/{id}', 'ToDoController@update');
@@ -33,6 +35,8 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/todo/peserta/{todo}/{access}','ToDoController@getPeserta');
     Route::post('/todo/peserta/create','ToDoController@storePeserta');
     Route::delete('/todo/peserta/delete/{user}/{todo}','ToDoController@destroyPeserta');
+    Route::delete('/todo/attachment/{id}', 'ToDoController@destroyFile');
+
     //=============================|Project|=========================================
     Route::get('/history', 'ToDoController@getHistory');
 
