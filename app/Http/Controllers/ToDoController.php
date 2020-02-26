@@ -130,7 +130,8 @@ class ToDoController extends Controller
 
     public function category()
     {
-        $data = DB::table('m_category')->orderBy('c_name','ASC')->get();
+        $data = DB::table('m_category')->orderBy('c_name','ASC')->where('c_user',null)->get();
+        $fromUser = DB::table('m_category')->orderBy('c_name','ASC')->where('c_user',Auth::user()->us_id)->get();
         $datas = array();
         foreach ($data as $key => $value) {
             $arr = [
@@ -138,6 +139,13 @@ class ToDoController extends Controller
                 'name'=> $value->c_name
             ];
             array_push($datas, $arr);
+        }
+        foreach ($fromUser as $key => $value) {
+            $arrUser = [
+                'id' => $value->c_id,
+                'name'=> $value->c_name
+            ];
+            array_push($datas, $arrUser);
         }
         return response()->json($datas);
     }
@@ -320,7 +328,7 @@ class ToDoController extends Controller
             })->get();
         }
         
-        $Project = DB::table('d_member_project')
+        $Project = DB::table('d_project_member')
                     ->join('d_project','mp_project','p_id')
                     ->where('p_name','LIKE', $request->search .'%')
                     ->where('mp_user',Auth::user()->us_id)
@@ -419,7 +427,10 @@ class ToDoController extends Controller
     }
     public function store_attachment(Request $request)
     {
-        $ext = pathinfo($request->pathname, PATHINFO_EXTENSION);
+        
+        DB::BeginTransaction();
+        try {
+            $ext = pathinfo($request->pathname, PATHINFO_EXTENSION);
         $ext = str_replace("'","",$ext);
         $image = $request->file64; 
         $image = str_replace('data:image/png;base64,', '', $image);
@@ -434,11 +445,10 @@ class ToDoController extends Controller
             }
 
         \File::put($path . $imageName, base64_decode($image));
-        DB::BeginTransaction();
-        try {
+
             $data = new Attachment;
             $data->tla_path = $imageName;
-            $data->tla_todolist = $request->todo;
+            $data->tla_todolist = $request->todolist;
             $data->save();
             DB::commit();  
             return response()->json([
@@ -629,19 +639,67 @@ class ToDoController extends Controller
         if($request->category == '1'){
             $project = $request->project;
         }
+
+        if($request->allday == '0'){
+            $planstart = Carbon::parse($request->planstart)->format('Y-m-d H:i:s');
+            $planend = Carbon::parse($request->planend)->format('Y-m-d H:i:s');
+        }else{
+            $planstart = Carbon::parse($request->planstart)->setTime(00, 00, 00);
+            $planend = Carbon::parse($request->planend)->setTime(23, 59, 59);
+        }
+
         $todo->tl_title         = $request->title;
         $todo->tl_category      = $request->category;
         $todo->tl_project       = $project;
         $todo->tl_desc          = $request->desc;
         $todo->tl_status        = 'Open';
         $todo->tl_progress      = 0;
-        $todo->tl_planstart     = Carbon::parse($request->planstart)->format('Y-m-d H:i:s');
-        $todo->tl_planend       = Carbon::parse($request->planend)->format('Y-m-d H:i:s');
+        $todo->tl_planstart     = $planstart;
+        $todo->tl_planend       = $planend;
+        $todo->tl_allday        = $request->allday;
         $todo->tl_exestart      = null;
         $todo->tl_exeend        = null;
         $todo->tl_created       = Carbon::now();
         $todo->tl_updated       = Carbon::now();
         $todo->update();
+
+        $cekDataSebelumnya = DB::table('d_todolist')->where('tl_id',$id)->first();
+        if($request->category != '1'){        
+            $ProjectTodoMember = DB::table('d_todolist_roles')
+                                ->where('tlr_todolist',$id)
+                                ->where('tlr_own','P')
+                                ->where('tlr_role','!=',1)
+                                ->delete();
+            DB::table('d_todolist_roles')->where('tlr_own','P')->delete();
+            $projetLeader = DB::table('d_todolist_roles')->where('tlr_own','P')->where('tlr_role',1)->get();
+            foreach ($projetLeader as $key => $value) {
+                DB::table('d_todolist_roles')->insert([
+                    'tlr_own' => 'T',
+                    'tlr_users' => $value->tlr_users,
+                    'tlr_role' => '1',
+                    'tlr_todolist' => $id,
+                ]);
+            }
+        }
+
+        if($request->category == '1'){
+            $projectMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
+            foreach ($projectMember as $key => $value) {
+
+                DB::table('d_todolist_roles')
+                ->where('tlr_users',$value->mp_user)
+                ->where('tlr_todolist',$id)
+                ->where('tlr_own','P')
+                ->delete();
+
+                DB::table('d_todolist_roles')->insert([
+                    'tlr_users' => $value->mp_user,
+                    'tlr_todolist' => $id,
+                    'tlr_own' => 'P',
+                    'tlr_role' => $value->mp_role,
+                ]);
+            }
+        }
 
         DB::commit();
         return response()->json([

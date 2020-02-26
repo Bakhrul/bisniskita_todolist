@@ -53,7 +53,7 @@ class ProjectController extends Controller
             'p_updated' => Carbon::now('Asia/Jakarta'),
         ]);
 
-        DB::table('d_member_project')->insert([
+        DB::table('d_project_member')->insert([
             'mp_project' => $idProject,
             'mp_user' => Auth::user()->us_id,
             'mp_role' => '1',
@@ -74,7 +74,7 @@ class ProjectController extends Controller
     }
     public function detail_project(Request $request){
 
-        $getMember = DB::table('d_member_project')
+        $getMember = DB::table('d_project_member')
                     ->join('m_users','mp_user','us_id')
                     ->join('m_roles','mp_role','r_id')
                     ->where('mp_project',$request->project)
@@ -102,10 +102,10 @@ class ProjectController extends Controller
                 'status' => 'user tidak ada',
             ]);
         }else{
-            $cekMember = DB::table('d_member_project')->where('mp_user',$cekUser->us_id)->where('mp_project',$request->project)->first();
+            $cekMember = DB::table('d_project_member')->where('mp_user',$cekUser->us_id)->where('mp_project',$request->project)->first();
             $cekTodo = DB::table('d_todolist')->where('tl_project',$request->project)->get();
             if($cekMember == null){
-                DB::table('d_member_project')->insert([
+                DB::table('d_project_member')->insert([
                     'mp_project' => $request->project,
                     'mp_user' => $cekUser->us_id,
                     'mp_role' => $request->status,
@@ -159,7 +159,7 @@ class ProjectController extends Controller
             'tl_updated' => Carbon::now('Asia/Jakarta'),
         ]);
 
-        $getMember = DB::table('d_member_project')->where('mp_project',$request->project)->get();
+        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
         foreach ($getMember as $key => $value) {
             DB::table('d_todolist_roles')->where('tlr_users',$value->mp_user)->where('tlr_todolist',$maxIdTodo)->delete();
             DB::table('d_todolist_roles')->insert([
@@ -181,7 +181,7 @@ class ProjectController extends Controller
     public function delete_member_project(Request $request){
      DB::beginTransaction();
         try {
-        DB::table('d_member_project')->where('mp_project',$request->project)->where('mp_user',$request->member)->delete();
+        DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user',$request->member)->delete();
 
         $getTodo = DB::table('d_todolist')->where('tl_project',$request->project)->get();
 
@@ -204,7 +204,7 @@ class ProjectController extends Controller
         try {
         DB::table('d_todolist')->where('tl_project',$request->project)->where('tl_id',$request->todolist)->delete();
 
-        $getMember = DB::table('d_member_project')->where('mp_project',$request->project)->get();
+        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
 
         foreach ($getMember as $key => $value) {
             DB::table('d_todolist_roles')->where('tlr_users',$value->mp_user)->where('tlr_todolist',$request->todolist)->delete();
@@ -222,7 +222,7 @@ class ProjectController extends Controller
     public function update_status_member_project(Request $request){
      DB::beginTransaction();
         try {
-        DB::table('d_member_project')->where('mp_user',$request->member)->where('mp_project',$request->project)->update([
+        DB::table('d_project_member')->where('mp_user',$request->member)->where('mp_project',$request->project)->update([
             'mp_role' => $request->role,
         ]);
 
@@ -272,7 +272,7 @@ class ProjectController extends Controller
 
     }
     public function filter_detail_project(Request $request){
-         $getMember = DB::table('d_member_project')
+         $getMember = DB::table('d_project_member')
                     ->join('m_users','mp_user','us_id')
                     ->join('m_roles','mp_role','r_id')
                     ->where('mp_project',$request->project)
@@ -298,7 +298,7 @@ class ProjectController extends Controller
                 })
                 ->where('tl_project',$request->project)
                 ->get();
-        $Member = DB::table('d_member_project')
+        $Member = DB::table('d_project_member')
                 ->where('mp_project',$request->project)
                 ->join('m_users','mp_user','us_id')
                 ->get();
@@ -324,7 +324,7 @@ class ProjectController extends Controller
         ]);
     }
     public function detail_member_project(Request $request){
-        $Member = DB::table('d_member_project')
+        $Member = DB::table('d_project_member')
                  ->join('m_users','mp_user','us_id')
                  ->where('mp_user',$request->member)
                  ->where('mp_project',$request->project)
