@@ -903,4 +903,22 @@ class ToDoController extends Controller
             return $th;
         }
     }
+    public function todo_ready($id){
+        $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist',$id)->get();
+        return response()->json([
+            'todo_ready' => $todoReady,
+        ]);
+    }
+     public function todo_normal($id){
+        $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist',$id)->get();
+        return response()->json([
+            'todo_normal' => $todoReady,
+        ]);
+    }
+     public function todo_done($id){
+        $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist',$id)->get();
+        return response()->json([
+            'todo_done' => $todoReady,
+        ]);
+    }
 }
