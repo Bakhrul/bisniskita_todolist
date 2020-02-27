@@ -60,7 +60,16 @@ class ToDoController extends Controller
         $data = todolistRole::leftJoin('d_todolist', function ($q) {
             $q->on('tlr_todolist', 'tl_id');
             $q->leftJoin('d_project', 'tl_project', 'p_id');
-        })->where('tlr_users', Auth::user()->us_id)->groupBy('tl_id')->get();
+        })
+        ->where(function($q){
+            $q->orWhere('tl_status','Finish');
+            $q->orWhere('p_status','Finish');
+        })
+        // 
+        ->where('tlr_users', Auth::user()->us_id)
+        ->groupBy('p_id')
+        ->get();
+
         $datas = array(
             
         );
@@ -405,6 +414,7 @@ class ToDoController extends Controller
             $todo->tl_exeend        = null;
             $todo->tl_created       = Carbon::now();
             $todo->tl_updated       = Carbon::now();
+            $todo->tl_allday        = $request->allday;
             $todo->save();
             
             DB::table('d_todolist_roles')
