@@ -476,7 +476,7 @@ class ToDoController extends Controller
         $member = DB::table('d_todolist_roles')
                 ->join('m_users', 'tlr_users', 'us_id')
                 ->where('tlr_todolist', $request->todolist)
-                ->orderBy('tlr_role')
+                ->orderBy('tlr_role','ASC')
                 ->groupBy('tlr_users')
                 ->get();
 
@@ -683,7 +683,7 @@ class ToDoController extends Controller
                     ->join('m_users', 'tlr_users', 'us_id')
                     ->join('m_roles', 'tlr_role', 'r_id')
                     ->where('tlr_todolist', $id)
-                    ->orderBy('tlr_role')
+                    ->orderBy('tlr_role','ASC')
                     ->groupBy('tlr_users')
                     ->get();
         $documentTodo = DB::table('d_todolist_attachment')
