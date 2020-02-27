@@ -32,6 +32,10 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/todo/edit/{id}','ToDoController@edit');
     Route::patch('/todo/update/{id}', 'ToDoController@update');
 
+    Route::get('/todo/todo_ready/{id}','ToDoController@todo_ready');
+    Route::get('/todo/todo_normal/{id}','ToDoController@todo_normal');
+    Route::get('/todo/todo_done/{id}','ToDoController@todo_done');
+
     Route::post('todo_edit/tambah_member','ToDoController@todo_edit_addmember');
     Route::post('todo_edit/delete_member','ToDoController@todo_edit_deletemember');
     Route::post('todo_edit/ganti_statusmember','ToDoController@todo_edit_ganti_statusmember');
