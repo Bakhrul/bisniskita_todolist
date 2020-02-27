@@ -190,7 +190,8 @@ class ToDoController extends Controller
             // return $data->get();
               $data = $data->where(function ($q) {
                             $q->where('tl_planstart','<=',Carbon::now()->format('Y-m-d'))
-                            ->where('tl_planend','>=',Carbon::now()->format('Y-m-d'));
+                            ->where('tl_planend','>=',Carbon::now()->format('Y-m-d'))
+                            ->orWhereBetween('tl_planstart',[Carbon::today(),Carbon::today()->setTime(23, 59, 59)]);
                     })->get();
         //       ->where(function ($q) {
         //           $q->where("DATE_FORMAT(tl_planstart,'%Y%m%d')", '>', Carbon::today());
