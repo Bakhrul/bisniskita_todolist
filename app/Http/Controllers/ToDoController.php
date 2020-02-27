@@ -19,9 +19,9 @@ class ToDoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function getTodoAction()
+    public function getTodoAction($id)
     {
-        $data = DB::table('d_todolist_action')->join('d_todolist', 'tla_todolist', 'tl_id')->get();
+        $data = DB::table('d_todolist_action')->join('d_todolist','tla_todolist','tl_id')->where('tla_todolist',$id)->get();
         $datas = array();
         foreach ($data as $key => $value) {
             $arr = [
@@ -498,11 +498,18 @@ class ToDoController extends Controller
 
         $TodoFile = DB::table('d_todolist_attachment')->where('tla_todolist', $request->todolist)->get();
 
+        $statusKita = DB::table('d_todolist_roles')
+                    ->where('tlr_todolist',$request->todolist)
+                    ->where('tlr_users',Auth::user()->us_id)
+                    ->orderBy('tlr_role','ASC')
+                    ->first();
+
         return response()->json([
             'todo' => $Todo,
             'todo_member' => $member,
             'todo_activity' => $TodoActivity,
             'todo_file' => $TodoFile,
+            'status_kita' => $statusKita,
         ]);
     }
     public function detail_member_todo(Request $request)
@@ -541,13 +548,56 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
-            DB::table('d_todolist_action')->insert([
-                'tla_todolist' => $request->todo,
-                'tla_title' => $request->title,
-                'tla_created' => Carbon::now()
-            ]);
+            switch ($request->type) {
+                case 'Action':
+                    $subId = DB::table('d_todolist_action')->where('tla_todolist',$request->todo)->max('tla_number') + 1;
+                    DB::table('d_todolist_action')->insert([
+                        'tla_todolist' => $request->todo,
+                        'tla_number' => $subId,
+                        'tla_title' => $request->title,
+                        'tla_created' => Carbon::now()
+                    ]);
+
+                    break;
+
+                case 'Ready':
+                     $subId = DB::table('d_todolist_ready')->where('tlr_todolist',$request->todo)->max('tlr_number') + 1;
+                    DB::table('d_todolist_ready')->insert([
+                        'tlr_todolist' => $request->todo,
+                        'tlr_number' => $subId,
+                        'tlr_title' => $request->title,
+                        'tlr_created' => Carbon::now()
+                    ]);
+                    break;
+
+                case 'Normal':
+                    $subId = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->max('tln_number') + 1;
+                    DB::table('d_todolist_normal')->insert([
+                        'tln_todolist' => $request->todo,
+                        'tln_number' => $subId,
+                        'tln_title' => $request->title,
+                        'tln_created' => Carbon::now()
+                    ]);
+                    break;
+
+                case 'Done':
+                    $subId = DB::table('d_todolist_done')->where('tld_todolist',$request->todo)->max('tld_number') + 1;
+                     DB::table('d_todolist_done')->insert([
+                        'tld_todolist' => $request->todo,
+                        'tld_number' => $subId,
+                        'tld_title' => $request->title,
+                        'tld_created' => Carbon::now()
+                    ]);
+                    break;
+                default:
+                    # code...
+                    break;
+            }
+            
             DB::Commit();
-            return response()->json(['status'=>'success']);
+            return response()->json([
+                'status'=>'success',
+            ]);
         } catch (\Throwable $th) {
             //throw $th;
         }
@@ -666,23 +716,119 @@ class ToDoController extends Controller
     public function updateAction(Request $request, $id)
     {
         DB::BeginTransaction();
-        try {
-            $done = '';
-            if ($request->done == 'true') {
-                $done = Carbon::now();
-            } else {
-                $done = null;
+        try {            
+            switch ($request->type) {
+                case 'Action':
+
+                    $cekData = DB::table('d_todolist_action')
+                              ->where('tla_todolist',$request->todo)
+                              ->where('tla_number',$id)
+                              ->first();
+
+                    if($cekData->tla_done == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'selesai';
+                        $validation = $cekData->tla_validation;
+                    }else{
+                        $done = null;
+                        $status = 'belum selesai';
+                        $validation = null;
+                    }
+
+                    DB::table('d_todolist_action')
+                    ->where('tla_todolist',$request->todo)
+                    ->where('tla_number',$id)
+                    ->update([
+                        'tla_done' => $done,
+                        'tla_validation' => $validation,
+                    ]);
+
+                break;
+                case 'Done':
+
+                    $cekData = DB::table('d_todolist_done')
+                                ->where('tld_todolist',$request->todo)
+                                ->where('tld_number',$id)
+                                ->first();
+
+                    if($cekData->tld_done == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'selesai';
+                        $validation = $cekData->tld_validation;
+                    }else{
+                        $done = null;
+                        $status = 'belum selesai';
+                        $validation = null;
+                    }
+
+                     DB::table('d_todolist_done')
+                    ->where('tld_todolist',$request->todo)
+                    ->where('tld_number',$id)
+                    ->update([
+                        'tld_done' => $done,
+                        'tld_validation' => $validation,
+                    ]);
+
+
+                break;
+                case 'Normal':
+
+                    $cekData = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->where('tln_number',$id)->first();
+
+                    if($cekData->tln_done == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'selesai';
+                        $validation = $cekData->tln_validation;
+                    }else{
+                        $done = null;
+                        $status = 'belum selesai';
+                        $validation = null;
+                    }
+
+                     DB::table('d_todolist_normal')
+                    ->where('tln_todolist',$request->todo)
+                    ->where('tln_number',$id)
+                    ->update([
+                        'tln_done' => $done,
+                        'tln_validation' => $validation,
+                    ]);
+
+                break;
+                case 'Ready':
+
+                    $cekData = DB::table('d_todolist_ready')->where('tlr_todolist',$request->todo)->where('tlr_number',$id)->first();
+                    if($cekData->tlr_done == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'selesai';
+                        $validation = $cekData->tlr_validation;
+                    }else{
+                        $done = null;
+                        $status = 'belum selesai';
+                        $validation = null;
+                    }
+
+                     DB::table('d_todolist_ready')
+                    ->where('tlr_todolist',$request->todo)
+                    ->where('tlr_number',$id)
+                    ->update([
+                        'tlr_done' => $done,
+                        'tlr_validation' => $validation,
+                    ]);
+                break;
+                default:
+                     return response()->json([
+                        'status' => 'type todolist tidak ditemukan',
+                    ]);
+                break;
             }
-            DB::Table('d_todolist_action')
-            ->where('tla_todolist', $request->todo)
-            ->where('tla_number', $id)
-            ->update([
-                'tla_done' => $done
-            ]);
+            
             DB::commit();
-            return response()->json(['status'=>'success','data'=> $done]);
+            return response()->json([
+                'status'=>$status,
+                'validation' => $validation,
+            ]);
         } catch (\Throwable $th) {
-            //throw $th;
+            DB::rollback();
         }
     }
 
@@ -887,18 +1033,170 @@ class ToDoController extends Controller
             'todo_ready' => $todoReady,
         ]);
     }
-    public function todo_normal($id)
-    {
-        $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist', $id)->get();
+     public function todo_normal($id){
+        $todoReady = DB::table('d_todolist_normal')->where('tln_todolist',$id)->get();
         return response()->json([
             'todo_normal' => $todoReady,
         ]);
     }
-    public function todo_done($id)
-    {
-        $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist', $id)->get();
+     public function todo_done($id){
+        $todoReady = DB::table('d_todolist_done')->where('tld_todolist',$id)->get();
         return response()->json([
             'todo_done' => $todoReady,
         ]);
+    }
+    public function validation_listtodo(Request $request){
+        DB::BeginTransaction();
+        try {            
+            $id = $request->id;
+            switch ($request->type) {
+                case 'Action':
+
+                    $cekData = DB::table('d_todolist_action')
+                              ->where('tla_todolist',$request->todo)
+                              ->where('tla_number',$id)
+                              ->first();
+
+                    if($cekData->tla_validation == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'validation';
+                    }else{
+                        $done = null;
+                        $status = 'belum validation';
+                    }
+
+                    DB::table('d_todolist_action')
+                    ->where('tla_todolist',$request->todo)
+                    ->where('tla_number',$id)
+                    ->update([
+                        'tla_validation' => $done,
+                    ]);
+
+                break;
+                case 'Done':
+
+                    $cekData = DB::table('d_todolist_done')
+                                ->where('tld_todolist',$request->todo)
+                                ->where('tld_number',$id)
+                                ->first();
+
+                    if($cekData->tld_validation == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'validation';
+                    }else{
+                        $done = null;
+                        $status = 'belum validation';
+                    }
+
+                     DB::table('d_todolist_done')
+                    ->where('tld_todolist',$request->todo)
+                    ->where('tld_number',$id)
+                    ->update([
+                        'tld_validation' => $done,
+                    ]);
+
+
+                break;
+                case 'Normal':
+
+                    $cekData = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->where('tln_number',$id)->first();
+
+                    if($cekData->tln_validation == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'validation';
+                    }else{
+                        $done = null;
+                        $status = 'belum validation';
+                    }
+
+                     DB::table('d_todolist_normal')
+                    ->where('tln_todolist',$request->todo)
+                    ->where('tln_number',$id)
+                    ->update([
+                        'tln_validation' => $done,
+                    ]);
+
+                break;
+                case 'Ready':
+
+                    $cekData = DB::table('d_todolist_ready')->where('tlr_todolist',$request->todo)->where('tlr_number',$id)->first();
+                    if($cekData->tlr_validation == null){
+                        $done = Carbon::now('Asia/Jakarta');
+                        $status = 'validation';
+                    }else{
+                        $done = null;
+                        $status = 'belum validation';
+                    }
+
+                     DB::table('d_todolist_ready')
+                    ->where('tlr_todolist',$request->todo)
+                    ->where('tlr_number',$id)
+                    ->update([
+                        'tlr_validation' => $done,
+                    ]);
+                break;
+                default:
+                     return response()->json([
+                        'status' => 'type todolist tidak ditemukan',
+                    ]);
+                break;
+            }
+            
+            DB::commit();
+            return response()->json([
+                'status'=>'success',
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollback();
+        }
+    }
+    public function started_todo(Request $request){
+        setlocale(LC_TIME, 'IND');
+        DB::BeginTransaction();
+        try {
+            switch ($request->type) {
+                case 'baru mengerjakan':
+                     DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                        'tl_exestart' => Carbon::now('Asia/Jakarta'),
+                    ]);
+                    break;
+                case 'pending':
+                         DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                            'tl_status' => 'Pending',
+                        ]);
+                    break;
+                case 'selesai':
+                         DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                             'tl_exeend' => Carbon::now('Asia/Jakarta'),
+                             'tl_status' => 'Finish',
+                             'tl_progress' => 100,
+                        ]);
+                         DB::table('d_todolist_timeline')->insert([
+                            'tlt_todolist' => $request->todo,
+                            'tlt_user' => Auth::user()->us_id,
+                            'tlt_progress' => 100,
+                            'tlt_note' => 'To Do Sudah Selesai Dikerjakan',
+                            'tlt_created' => Carbon::now('Asia/Jakarta'),
+                         ]);
+                    break;
+                case 'mulai mengerjakan kembali':
+                         DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                             'tl_status' => 'Open',
+                        ]);
+                        break;
+                
+                default:
+                    # code...
+                    break;
+            }
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
     }
 }

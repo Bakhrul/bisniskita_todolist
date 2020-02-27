@@ -35,13 +35,14 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/todo/todo_ready/{id}','ToDoController@todo_ready');
     Route::get('/todo/todo_normal/{id}','ToDoController@todo_normal');
     Route::get('/todo/todo_done/{id}','ToDoController@todo_done');
+    Route::post('/todo/started-todo','ToDoController@started_todo');
 
     Route::post('todo_edit/tambah_member','ToDoController@todo_edit_addmember');
     Route::post('todo_edit/delete_member','ToDoController@todo_edit_deletemember');
     Route::post('todo_edit/ganti_statusmember','ToDoController@todo_edit_ganti_statusmember');
     Route::post('todo_edit/tambah_file','ToDoController@store_attachment');
-
-    Route::get('/todo/list/actions','ToDoController@getTodoAction');
+    Route::post('todo/list/validation','ToDoController@validation_listtodo');
+    Route::get('/todo/list/actions/{id}','ToDoController@getTodoAction');
     Route::post('/todo/list/actions','ToDoController@storeAction');
     Route::patch('/todo/list/actions/{id}','ToDoController@updateAction');
     Route::get('/todo/search/peserta','ToDoController@getPesertaFilter');
