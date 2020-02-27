@@ -29,7 +29,8 @@ class ToDoController extends Controller
                 'todo' => $value->tla_todolist,
                 'title' => $value->tla_title,
                 'created'=> $value->tl_created,
-                'done' => $value->tla_done
+                'done' => $value->tla_done,
+                'valid' => $value->tla_validation
 
             ];
             array_push($datas,$arr);
@@ -186,23 +187,28 @@ class ToDoController extends Controller
                 
 
         if ($type == "1") {
+            // return $data->get();
               $data = $data->where(function ($q) {
-        $q->where("tl_planstart", '>=', Carbon::today())
-            ->orWhere('tl_planend', '>=', Carbon::today())
-            ->Where('tl_planend', '<=', Carbon::now('Asia/Jakarta')->setTime(23, 59, 59));
-    })->limit(5)->get();
+                            $q->where('tl_planstart','<=',Carbon::now()->format('Y-m-d'))
+                            ->where('tl_planend','>=',Carbon::now()->format('Y-m-d'));
+                    })->get();
+        //       ->where(function ($q) {
+        //           $q->where("DATE_FORMAT(tl_planstart,'%Y%m%d')", '>', Carbon::today());
+        //             // $q->OrWhereBetween('tl_planstart', [Carbon::today('Asia/Jakarta'),Carbon::today('Asia/Jakarta')->setTime(23, 59, 59)]);
+        //             // $q->OrWhereBetween('tl_planend', [Carbon::today('Asia/Jakarta'),Carbon::today('Asia/Jakarta')->setTime(23, 59, 59)]);
+        //         $q->Where("DATE_FORMAT(tl_planend,'%Y%m%d')", '<', Carbon::today('Asia/Jakarta')->setTime(23, 59, 59));
+        //   })
+    // ->get();
         }else if ($type == "2") {
             $data = $data->where(function($q){
-            $q->where("tl_planstart" ,'>=',Carbon::tomorrow())
-            ->orWhere('tl_planend','>=',Carbon::tomorrow())
-            ->Where('tl_planend','<=', Carbon::tomorrow()->setTime(23,59,59));
-            })->limit(5)->get();
+            $q->where("tl_planstart" ,'>',Carbon::tomorrow())
+            ->orWhere('tl_planend','>',Carbon::tomorrow());
+            })->Where('tl_planend','<', Carbon::tomorrow()->setTime(23,59,59))->limit(5)->get();
         }else if ($type == "3") {
              $data = $data->where(function ($q) {
-            $q->where("tl_planstart", '>=', Carbon::tomorrow()->addDay())
-                ->orWhere('tl_planend', '>=', Carbon::tomorrow()->addDay())
-                ->Where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
-            })->limit(5)->get();
+            $q->where("tl_planstart", '>', Carbon::tomorrow()->addDay())
+                ->orWhere('tl_planend', '>', Carbon::tomorrow()->addDay());
+            })->Where('tl_planend', '<', Carbon::tomorrow()->addDay()->setTime(23, 59, 59))->limit(5)->get();
 
         }else if ($type == "4") {
             
@@ -213,7 +219,7 @@ class ToDoController extends Controller
         }
         else if ($type == "5") {
            $data = $data->where(function ($q) {
-            $q->whereMonth("tl_planstart", '<=', Carbon::now()->month)->orWhereMonth('tl_planend','>=',Carbon::now()->month);
+            $q->whereMonth("tl_planstart", '<', Carbon::now()->month)->orWhereMonth('tl_planend','>',Carbon::now()->month);
             })->get();
 
         }else {
@@ -687,20 +693,23 @@ class ToDoController extends Controller
      */
     public function updateAction(Request $request,$id)
     {
+
         DB::BeginTransaction();
         try {
             $done = '';
-            if ($request->done == true) {
+            if ($request->done == 'true') {
                 $done = Carbon::now();
             }else{
-                $done = Null;
+                $done = NULL;
             }
-            DB::Table('d_todolist_action')->where('tla_todolist',$request->todo)
-            ->where('tla_number',$id)->update([
+            DB::Table('d_todolist_action')
+            ->where('tla_todolist',$request->todo)
+            ->where('tla_number',$id)
+            ->update([
                 'tla_done' => $done
             ]);
             DB::commit();
-            return response()->json(['status'=>'success']);
+            return response()->json(['status'=>'success','data'=> $done]);
         } catch (\Throwable $th) {
             //throw $th;
         }
