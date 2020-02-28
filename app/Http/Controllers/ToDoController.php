@@ -11,6 +11,7 @@ use App\User;
 use App\todolistRole;
 use File;
 use App\Attachment;
+use Illuminate\Support\Facades\Storage;
 
 class ToDoController extends Controller
 {
@@ -19,6 +20,12 @@ class ToDoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    public function getRequestDownloadFile()
+    {
+        return response()->download(storage_path("app/public/{$filename}"));
+
+    }
+
     public function getTodoAction($id)
     {
         $data = DB::table('d_todolist_action')->join('d_todolist','tla_todolist','tl_id')->where('tla_todolist',$id)->get();
@@ -147,9 +154,7 @@ class ToDoController extends Controller
                 'email' => $value->us_email,
             ];
             array_push($datas, $arr);
-        }
-
-        
+        }     
         return response()->json($datas);
     }
 
@@ -233,6 +238,7 @@ class ToDoController extends Controller
         }
         return response()->json($todos);
     }
+
     public function actionpinned_todo(Request $request)
     {
         DB::BeginTransaction();
@@ -462,7 +468,9 @@ class ToDoController extends Controller
                 File::makeDirectory($path, 0777, true, true);
             }
 
-            \File::put($path . $imageName, base64_decode($image));
+            // \File::put($path . $imageName, base64_decode($image));
+            Storage::disk('public')->put($path . $imageName, base64_decode($image));
+
 
             $data = new Attachment;
             $data->tla_path = $imageName;
@@ -473,7 +481,7 @@ class ToDoController extends Controller
                 'status' => 'success'
             ]);
         } catch (\Throwable $th) {
-            //throw $th;
+            throw $th;
         }
     }
 
@@ -498,6 +506,21 @@ class ToDoController extends Controller
 
         $TodoFile = DB::table('d_todolist_attachment')->where('tla_todolist', $request->todolist)->get();
 
+        $dataFile = array();
+        foreach ($TodoFile as $key => $value) {
+            $arr = [
+                'id' => $value->tla_id,
+                'todo' => $value->tla_todolist,
+                'path' => asset('files/'. $value->tla_path)
+
+            ];
+            // return response()->file(storage_path("files/{$value->tla_path}"));
+
+            array_push($dataFile,$arr);
+            
+        }
+
+
         $statusKita = DB::table('d_todolist_roles')
                     ->where('tlr_todolist',$request->todolist)
                     ->where('tlr_users',Auth::user()->us_id)
@@ -508,7 +531,7 @@ class ToDoController extends Controller
             'todo' => $Todo,
             'todo_member' => $member,
             'todo_activity' => $TodoActivity,
-            'todo_file' => $TodoFile,
+            'todo_file' => $dataFile,
             'status_kita' => $statusKita,
         ]);
     }

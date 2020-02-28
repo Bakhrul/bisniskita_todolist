@@ -61,6 +61,9 @@
             .m-b-md {
                 margin-bottom: 30px;
             }
+            <img src="{{
+                asset('public/files')
+            }}" alt="">
         </style>
     </head>
     <body>

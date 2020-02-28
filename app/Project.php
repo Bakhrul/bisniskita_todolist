@@ -14,7 +14,12 @@ class Project extends Model
 
      function todo()
     {
-        return $this->hasMany('App\Todo');
+        return $this->hasMany('App\Todo','tl_project','p_id');
+    }
+
+    function role()
+    {
+        return $this->hasMany('App\projectMember','mp_project','p_id');
     }
 
 }
