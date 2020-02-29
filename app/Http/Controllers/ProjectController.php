@@ -23,7 +23,7 @@ class ProjectController extends Controller
      */
     public function dashboard(){
         $data = Project::with('todo')->with(['role' => function($q){
-            $q->with('user');
+            $q->with('user')->limit(5);
         }])->get();
 
         $datas = array(
