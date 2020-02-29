@@ -12,6 +12,7 @@ use App\todolistRole;
 use File;
 use App\Attachment;
 use Illuminate\Support\Facades\Storage;
+use Response;
 
 class ToDoController extends Controller
 {
@@ -196,11 +197,13 @@ class ToDoController extends Controller
                 $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
             })->get();
         } elseif ($type == "2") {
+            // return response()->json(Carbon::tomorrow());
             $data = $data->where(function ($q) {
                 $q->where("tl_planend", '>', Carbon::today());
                 $q->where("tl_planend", '<=', Carbon::today()->setTime(23, 59, 59));
             })->get();
         } elseif ($type == "3") {
+            // return ;
             $data = $data->where(function ($q) {
                 $q->where("tl_planend", '>', Carbon::tomorrow())
             ->Where('tl_planend', '<=', Carbon::tomorrow()->setTime(23, 59, 59));
@@ -468,8 +471,10 @@ class ToDoController extends Controller
                 File::makeDirectory($path, 0777, true, true);
             }
 
-            // \File::put($path . $imageName, base64_decode($image));
-            Storage::disk('public')->put($path . $imageName, base64_decode($image));
+            \File::put($path . $imageName, base64_decode($image));
+            // Storage::disk('local')->put($imageName, base64_decode($image));
+            // $path = Storage::putFile($path . $imageName, base64_decode($image));
+
 
 
             $data = new Attachment;
@@ -508,13 +513,15 @@ class ToDoController extends Controller
 
         $dataFile = array();
         foreach ($TodoFile as $key => $value) {
+            $path = asset('storage/files/' . $value->tla_path);
+     
             $arr = [
                 'id' => $value->tla_id,
                 'todo' => $value->tla_todolist,
-                'path' => asset('files/'. $value->tla_path)
+                'path' => $path,
+                'filename' => $value->tla_path
 
             ];
-            // return response()->file(storage_path("files/{$value->tla_path}"));
 
             array_push($dataFile,$arr);
             
