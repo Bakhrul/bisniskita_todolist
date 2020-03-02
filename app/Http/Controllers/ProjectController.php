@@ -22,9 +22,12 @@ class ProjectController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function dashboard(){
-        $data = Project::with(['role' => function($q){
+        $data = Project::leftJoin('d_project_member','mp_project','p_id')
+        ->where('mp_user',Auth::user()->us_id)
+        ->with(['role' => function($q){
             $q->with('user');
         }])->get();
+
         $datas = array(
             'project' => [
                 
