@@ -11,7 +11,7 @@ class projectMember extends Model
 
     public function project()
     {
-        return $this->belongsTo('App\projectMember', 'mp_project', 'p_id');
+        return $this->belongsTo('App\Project', 'mp_project', 'p_id');
 
     }
 

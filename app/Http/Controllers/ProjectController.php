@@ -22,10 +22,9 @@ class ProjectController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function dashboard(){
-        $data = Project::with('todo')->with(['role' => function($q){
-            $q->with('user')->limit(5);
+        $data = Project::with(['role' => function($q){
+            $q->with('user');
         }])->get();
-
         $datas = array(
             'project' => [
                 
