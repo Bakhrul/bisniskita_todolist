@@ -83,10 +83,11 @@ class ProjectController extends Controller
         $getTodo = DB::table('d_todolist')
                     ->where('tl_project',$request->project)
                     ->get();
-
+        $project = DB::table('d_project')->where('p_id',$request->project)->first();
         return response()->json([
             'member' => $getMember,
             'todo' => $getTodo,
+            'project' => $project,
         ]);
 
     }
@@ -334,6 +335,63 @@ class ProjectController extends Controller
                  ->where('mp_project',$request->project)
                  ->first();
         return response()->json($Member);
+    }
+    public function update_data_project(Request $request){
+        DB::beginTransaction();
+        try {
+                
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_name' => $request->nama_project,
+                'p_timestart' => Carbon::parse($request->tanggal_awal),
+                'p_timeend' => Carbon::parse($request->tanggal_akhir),
+                'p_desc' => $request->deskripsi_project,
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function started_project(Request $request){
+        DB::beginTransaction();
+        try {
+            
+            switch ($request->type) {
+                case 'baru mengerjakan':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Working',
+                    ]);
+                    break;
+                case 'pending mengerjakan':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Pending',
+                    ]);
+                    break;
+                case 'selesai mengerjakan':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Finish',
+                    ]);
+                    break;
+                case 'mulai mengerjakan lagi':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Working',
+                    ]);
+                    break;
+            }
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
     }
     /**
      * Show the form for creating a new resource.
