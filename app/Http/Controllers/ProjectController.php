@@ -37,6 +37,7 @@ class ProjectController extends Controller
             $arrProj = [
                 'id' => $value->p_id,
                 'title' => $value->p_name,
+                'created_date' => $value->p_timestart,
                 'members'=> [],
                 'member_total'=> '',
                 'percent'=> ''
@@ -45,11 +46,9 @@ class ProjectController extends Controller
             $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
             $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
 
-            $percent = $count > 0 ? ((($sum/$count) / 100) * 100) : 0;
+            $percent = $count > 0 ? round(((($sum/$count) / 100) * 100),2) : 0;
 
-            $arrProj['percent'] = $percent;
-            
-
+            $arrProj['percent'] = $percent;        
             foreach ($value['role'] as $key2 => $valueRole) {
                 $arrUser = [
                     'id' => $valueRole['user']->us_id,
@@ -59,8 +58,8 @@ class ProjectController extends Controller
 
                 array_push($arrProj['members'],$arrUser);
             }
-                $arrProj['member_total'] =  count($value['role']);
-
+            $MemberTotal = DB::table('d_project_member')->where('mp_project',$value->p_id)->count();
+            $arrProj['member_total'] =  $MemberTotal;
             array_push($datas['project'], $arrProj);
 
         }
@@ -130,10 +129,11 @@ class ProjectController extends Controller
         $getTodo = DB::table('d_todolist')
                     ->where('tl_project',$request->project)
                     ->get();
-
+        $project = DB::table('d_project')->where('p_id',$request->project)->first();
         return response()->json([
             'member' => $getMember,
             'todo' => $getTodo,
+            'project' => $project,
         ]);
 
     }
@@ -381,6 +381,63 @@ class ProjectController extends Controller
                  ->where('mp_project',$request->project)
                  ->first();
         return response()->json($Member);
+    }
+    public function update_data_project(Request $request){
+        DB::beginTransaction();
+        try {
+                
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_name' => $request->nama_project,
+                'p_timestart' => Carbon::parse($request->tanggal_awal),
+                'p_timeend' => Carbon::parse($request->tanggal_akhir),
+                'p_desc' => $request->deskripsi_project,
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function started_project(Request $request){
+        DB::beginTransaction();
+        try {
+            
+            switch ($request->type) {
+                case 'baru mengerjakan':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Working',
+                    ]);
+                    break;
+                case 'pending mengerjakan':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Pending',
+                    ]);
+                    break;
+                case 'selesai mengerjakan':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Finish',
+                    ]);
+                    break;
+                case 'mulai mengerjakan lagi':
+                    DB::table('d_project')->where('p_id',$request->project)->update([
+                        'p_status' => 'Working',
+                    ]);
+                    break;
+            }
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
     }
     /**
      * Show the form for creating a new resource.
