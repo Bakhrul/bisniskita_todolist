@@ -12,6 +12,7 @@ use App\Todo;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\projectMember;
 
 class ProjectController extends Controller
 {
@@ -20,6 +21,53 @@ class ProjectController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    public function dashboard(){
+        $data = Project::with('todo')->with(['role' => function($q){
+            $q->with('user')->limit(5);
+        }])->get();
+
+        $datas = array(
+            'project' => [
+                
+            ]
+        );
+        $dtx = array();
+        // return response()->json()
+        foreach ($data as $key => $value) {
+
+            $arrProj = [
+                'id' => $value->p_id,
+                'title' => $value->p_name,
+                'members'=> [],
+                'member_total'=> '',
+                'percent'=> ''
+            ];
+
+            $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
+            $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
+
+            $percent = $count > 0 ? ((($sum/$count) / 100) * 100) : 0;
+
+            $arrProj['percent'] = $percent;
+            
+
+            foreach ($value['role'] as $key2 => $valueRole) {
+                $arrUser = [
+                    'id' => $valueRole['user']->us_id,
+                    'name' => $valueRole['user']->us_name,
+                    'path' => $valueRole['user']->us_photo,
+                ];
+
+                array_push($arrProj['members'],$arrUser);
+            }
+                $arrProj['member_total'] =  count($value['role']);
+
+            array_push($datas['project'], $arrProj);
+
+        }
+        return response()->json($datas);
+    }
+
     public function index()
     {
         $data = DB::table('d_project_member')->join('d_project','mp_project','p_id')->where('mp_user',Auth::user()->us_id)->orderBy('p_id','ASC')->get();

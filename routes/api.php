@@ -60,6 +60,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/todolist_berbintang','ToDoController@todolist_berbintang');
     Route::post('/detail_todo','ToDoController@detail_todo');
     //=============================|Project|=========================================
+    Route::get('/dashboard','ProjectController@dashboard');
     Route::get('/project','ProjectController@index');
     Route::post('/create_project','ProjectController@create_project');
     Route::post('/detail_project','ProjectController@detail_project');

@@ -37,4 +37,10 @@ class User extends Authenticatable
     public function validateForPassportPasswordGrant($password){
         return Hash::check($password, $this->us_password);
     }
+
+    public function role()
+    {
+        return $this->hasMany('App\projectMember', 'mp_user', 'us_id');
+
+    }
 }

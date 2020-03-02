@@ -11,6 +11,8 @@ use App\User;
 use App\todolistRole;
 use File;
 use App\Attachment;
+use Illuminate\Support\Facades\Storage;
+use Response;
 
 class ToDoController extends Controller
 {
@@ -19,6 +21,12 @@ class ToDoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    public function getRequestDownloadFile()
+    {
+        return response()->download(storage_path("app/public/{$filename}"));
+
+    }
+
     public function getTodoAction($id)
     {
         $data = DB::table('d_todolist_action')->join('d_todolist','tla_todolist','tl_id')->where('tla_todolist',$id)->get();
@@ -147,9 +155,7 @@ class ToDoController extends Controller
                 'email' => $value->us_email,
             ];
             array_push($datas, $arr);
-        }
-
-        
+        }     
         return response()->json($datas);
     }
 
@@ -191,11 +197,13 @@ class ToDoController extends Controller
                 $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
             })->get();
         } elseif ($type == "2") {
+            // return response()->json(Carbon::tomorrow());
             $data = $data->where(function ($q) {
                 $q->where("tl_planend", '>', Carbon::today());
                 $q->where("tl_planend", '<=', Carbon::today()->setTime(23, 59, 59));
             })->get();
         } elseif ($type == "3") {
+            // return ;
             $data = $data->where(function ($q) {
                 $q->where("tl_planend", '>', Carbon::tomorrow())
             ->Where('tl_planend', '<=', Carbon::tomorrow()->setTime(23, 59, 59));
@@ -233,6 +241,7 @@ class ToDoController extends Controller
         }
         return response()->json($todos);
     }
+
     public function actionpinned_todo(Request $request)
     {
         DB::BeginTransaction();
@@ -463,6 +472,10 @@ class ToDoController extends Controller
             }
 
             \File::put($path . $imageName, base64_decode($image));
+            // Storage::disk('local')->put($imageName, base64_decode($image));
+            // $path = Storage::putFile($path . $imageName, base64_decode($image));
+
+
 
             $data = new Attachment;
             $data->tla_path = $imageName;
@@ -473,7 +486,7 @@ class ToDoController extends Controller
                 'status' => 'success'
             ]);
         } catch (\Throwable $th) {
-            //throw $th;
+            throw $th;
         }
     }
 
@@ -498,6 +511,23 @@ class ToDoController extends Controller
 
         $TodoFile = DB::table('d_todolist_attachment')->where('tla_todolist', $request->todolist)->get();
 
+        $dataFile = array();
+        foreach ($TodoFile as $key => $value) {
+            $path = asset('storage/files/' . $value->tla_path);
+     
+            $arr = [
+                'id' => $value->tla_id,
+                'todo' => $value->tla_todolist,
+                'path' => $path,
+                'filename' => $value->tla_path
+
+            ];
+
+            array_push($dataFile,$arr);
+            
+        }
+
+
         $statusKita = DB::table('d_todolist_roles')
                     ->where('tlr_todolist',$request->todolist)
                     ->where('tlr_users',Auth::user()->us_id)
@@ -508,7 +538,7 @@ class ToDoController extends Controller
             'todo' => $Todo,
             'todo_member' => $member,
             'todo_activity' => $TodoActivity,
-            'todo_file' => $TodoFile,
+            'todo_file' => $dataFile,
             'status_kita' => $statusKita,
         ]);
     }
