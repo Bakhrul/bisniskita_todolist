@@ -196,6 +196,13 @@ class ProjectController extends Controller
         try {
         
         $maxIdTodo = DB::table('d_todolist')->max('tl_id') + 1;
+        if($request->allday == '0'){
+            $dateStart = Carbon::parse($request->tanggal_awal)->format('Y-m-d H:i:s');
+            $dateEnd = Carbon::parse($request->tanggal_akhir)->format('Y-m-d H:i:s');
+        }else{
+            $dateStart = Carbon::parse($request->tanggal_awal)->setTime(00, 00, 00);
+            $dateEnd = Carbon::parse($request->tanggal_akhir)->setTime(23, 59, 59);
+        }
         DB::table('d_todolist')->insert([
             'tl_id' => $maxIdTodo,
             'tl_category' => '1',
@@ -204,9 +211,9 @@ class ProjectController extends Controller
             'tl_desc' => $request->deskripsi,
             'tl_status' => 'Open',
             'tl_progress' => 0,
-            'tl_allday' => 0,
-            'tl_planstart' => Carbon::parse($request->tanggal_awal)->format('Y-m-d H:i:s'),
-            'tl_planend' => Carbon::parse($request->tanggal_akhir)->format('Y-m-d H:i:s'),
+            'tl_allday' => $request->allday,
+            'tl_planstart' => $dateStart,
+            'tl_planend' => $dateEnd,
             'tl_created' => Carbon::now('Asia/Jakarta'),
             'tl_updated' => Carbon::now('Asia/Jakarta'),
         ]);

@@ -59,6 +59,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/actionpinned_todo','ToDoController@actionpinned_todo');
     Route::post('/todolist_berbintang','ToDoController@todolist_berbintang');
     Route::post('/detail_todo','ToDoController@detail_todo');
+    Route::post('/todo_activity','ToDoController@todo_activity');
     //=============================|Project|=========================================
     Route::get('/dashboard','ProjectController@dashboard');
     Route::get('/project','ProjectController@index');

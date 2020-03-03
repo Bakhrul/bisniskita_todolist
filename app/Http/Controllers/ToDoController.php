@@ -37,7 +37,7 @@ class ToDoController extends Controller
                 'todo' => $value->tla_todolist,
                 'title' => $value->tla_title,
                 'created'=> $value->tl_created,
-                'done' => $value->tla_done,
+                'done' => $value->tla_executed,
                 'valid' => $value->tla_validation
 
             ];
@@ -503,12 +503,6 @@ class ToDoController extends Controller
                 ->groupBy('tlr_users')
                 ->get();
 
-        $TodoActivity = DB::table('d_todolist_timeline')
-                        ->join('m_users', 'tlt_user', 'us_id')
-                        ->where('tlt_todolist', $request->todolist)
-                        ->orderBy('tlt_id', 'Desc')
-                        ->get();
-
         $TodoFile = DB::table('d_todolist_attachment')->where('tla_todolist', $request->todolist)->get();
 
         $dataFile = array();
@@ -537,7 +531,6 @@ class ToDoController extends Controller
         return response()->json([
             'todo' => $Todo,
             'todo_member' => $member,
-            'todo_activity' => $TodoActivity,
             'todo_file' => $dataFile,
             'status_kita' => $statusKita,
         ]);
@@ -585,7 +578,8 @@ class ToDoController extends Controller
                         'tla_todolist' => $request->todo,
                         'tla_number' => $subId,
                         'tla_title' => $request->title,
-                        'tla_created' => Carbon::now()
+                        'tla_created' => Carbon::now('Asia/Jakarta'),
+                        'tla_createduser' => Auth::user()->us_id,
                     ]);
 
                     break;
@@ -596,7 +590,8 @@ class ToDoController extends Controller
                         'tlr_todolist' => $request->todo,
                         'tlr_number' => $subId,
                         'tlr_title' => $request->title,
-                        'tlr_created' => Carbon::now()
+                        'tlr_created' => Carbon::now('Asia/Jakarta'),
+                        'tlr_createduser' => Auth::user()->us_id,
                     ]);
                     break;
 
@@ -606,7 +601,8 @@ class ToDoController extends Controller
                         'tln_todolist' => $request->todo,
                         'tln_number' => $subId,
                         'tln_title' => $request->title,
-                        'tln_created' => Carbon::now()
+                        'tln_created' => Carbon::now('Asia/Jakarta'),
+                        'tln_createduser' => Auth::user()->us_id,
                     ]);
                     break;
 
@@ -616,7 +612,8 @@ class ToDoController extends Controller
                         'tld_todolist' => $request->todo,
                         'tld_number' => $subId,
                         'tld_title' => $request->title,
-                        'tld_created' => Carbon::now()
+                        'tld_created' => Carbon::now('Asia/Jakarta'),
+                        'tld_createduser' => Auth::user()->us_id,
                     ]);
                     break;
                 default:
@@ -747,30 +744,43 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {            
+            $cekAdminTodo = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->where('tlr_users',Auth::user()->us_id)->orderBy('tlr_role','ASC')->first();
+            if($cekAdminTodo->tlr_role == '1' || $cekAdminTodo->tlr_role == '2' || $cekAdminTodo->tlr_role == 1 || $cekAdminTodo->tlr_role == 2){
+                $autoValidationUser = Auth::user()->us_id;
+                $autoValidationDate =  Carbon::now('Asia/Jakarta');
+            }else{
+                $autoValidationUser = null;
+                $autoValidationDate = null;
+            }
             switch ($request->type) {
                 case 'Action':
-
                     $cekData = DB::table('d_todolist_action')
                               ->where('tla_todolist',$request->todo)
                               ->where('tla_number',$id)
                               ->first();
 
-                    if($cekData->tla_done == null){
-                        $done = Carbon::now('Asia/Jakarta');
+                    if($cekData->tla_executed == null){
+                        $executedDate = Carbon::now('Asia/Jakarta');
+                        $executedUser = Auth::user()->us_id;
                         $status = 'selesai';
-                        $validation = $cekData->tla_validation;
+                        $validationDate = $autoValidationDate;
+                        $validationUser = $autoValidationUser;
                     }else{
-                        $done = null;
+                        $executedDate = null;
+                        $executedUser = null;
                         $status = 'belum selesai';
-                        $validation = null;
+                        $validationDate = null;
+                        $validationUser = null;
                     }
 
                     DB::table('d_todolist_action')
                     ->where('tla_todolist',$request->todo)
                     ->where('tla_number',$id)
                     ->update([
-                        'tla_done' => $done,
-                        'tla_validation' => $validation,
+                        'tla_executed' => $executedDate,
+                        'tla_executeduser'  => $executedUser,
+                        'tla_validationuser' => $validationUser,
+                        'tla_validation' => $validationDate,
                     ]);
 
                 break;
@@ -781,22 +791,28 @@ class ToDoController extends Controller
                                 ->where('tld_number',$id)
                                 ->first();
 
-                    if($cekData->tld_done == null){
-                        $done = Carbon::now('Asia/Jakarta');
+                   if($cekData->tld_executed == null){
+                        $executedDate = Carbon::now('Asia/Jakarta');
+                        $executedUser = Auth::user()->us_id;
                         $status = 'selesai';
-                        $validation = $cekData->tld_validation;
+                        $validationDate = $autoValidationDate;
+                        $validationUser = $autoValidationUser;
                     }else{
-                        $done = null;
+                        $executedDate = null;
+                        $executedUser = null;
                         $status = 'belum selesai';
-                        $validation = null;
+                        $validationDate = null;
+                        $validationUser = null;
                     }
 
                      DB::table('d_todolist_done')
                     ->where('tld_todolist',$request->todo)
                     ->where('tld_number',$id)
                     ->update([
-                        'tld_done' => $done,
-                        'tld_validation' => $validation,
+                        'tld_executed' => $executedDate,
+                        'tld_executeduser' => $executedUser,
+                        'tld_validationuser' => $validationUser,
+                        'tld_validation' => $validationDate,
                     ]);
 
 
@@ -805,44 +821,55 @@ class ToDoController extends Controller
 
                     $cekData = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->where('tln_number',$id)->first();
 
-                    if($cekData->tln_done == null){
-                        $done = Carbon::now('Asia/Jakarta');
+                    if($cekData->tln_executed == null){
+                        $executedDate = Carbon::now('Asia/Jakarta');
+                        $executedUser = Auth::user()->us_id;
                         $status = 'selesai';
-                        $validation = $cekData->tln_validation;
+                        $validationDate = $autoValidationDate;
+                        $validationUser = $autoValidationUser;
                     }else{
-                        $done = null;
+                        $executedDate = null;
+                        $executedUser = null;
                         $status = 'belum selesai';
-                        $validation = null;
+                        $validationDate = null;
+                        $validationUser = null;
                     }
 
                      DB::table('d_todolist_normal')
                     ->where('tln_todolist',$request->todo)
                     ->where('tln_number',$id)
                     ->update([
-                        'tln_done' => $done,
-                        'tln_validation' => $validation,
+                        'tln_executed' => $executedDate,
+                        'tln_executeduser' => $executedUser,
+                        'tln_validation' => $validationDate,
+                        'tln_validationuser' => $validationUser,
                     ]);
 
                 break;
                 case 'Ready':
 
                     $cekData = DB::table('d_todolist_ready')->where('tlr_todolist',$request->todo)->where('tlr_number',$id)->first();
-                    if($cekData->tlr_done == null){
-                        $done = Carbon::now('Asia/Jakarta');
+                  if($cekData->tlr_executed == null){
+                        $executedDate = Carbon::now('Asia/Jakarta');
+                        $executedUser = Auth::user()->us_id;
                         $status = 'selesai';
-                        $validation = $cekData->tlr_validation;
+                        $validationDate = $autoValidationDate;
+                        $validationUser = $autoValidationUser;
                     }else{
-                        $done = null;
+                        $executedDate = null;
+                        $executedUser = null;
                         $status = 'belum selesai';
-                        $validation = null;
+                        $validationDate = null;
+                        $validationUser = null;
                     }
-
                      DB::table('d_todolist_ready')
                     ->where('tlr_todolist',$request->todo)
                     ->where('tlr_number',$id)
                     ->update([
-                        'tlr_done' => $done,
-                        'tlr_validation' => $validation,
+                        'tlr_executed' => $executedDate,
+                        'tlr_executeduser' => $executedUser,
+                        'tlr_validationuser' => $validationUser,
+                        'tlr_validation' => $validationDate,
                     ]);
                 break;
                 default:
@@ -855,7 +882,7 @@ class ToDoController extends Controller
             DB::commit();
             return response()->json([
                 'status'=>$status,
-                'validation' => $validation,
+                'validation' => $validationDate,
             ]);
         } catch (\Throwable $th) {
             DB::rollback();
@@ -1174,7 +1201,7 @@ class ToDoController extends Controller
             
             DB::commit();
             return response()->json([
-                'status'=>'success',
+                'status'=> $status,
             ]);
         } catch (\Throwable $th) {
             DB::rollback();
@@ -1228,5 +1255,14 @@ class ToDoController extends Controller
             DB::rollback();
             return $e;
         }
+    }
+
+    public function todo_activity(Request $request){
+          $TodoActivity = DB::table('d_todolist_timeline')
+                        ->join('m_users', 'tlt_user', 'us_id')
+                        ->where('tlt_todolist', $request->todolist)
+                        ->orderBy('tlt_id', 'Desc')
+                        ->get();
+        return response()->json($TodoActivity);
     }
 }
