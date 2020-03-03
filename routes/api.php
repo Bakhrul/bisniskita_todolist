@@ -16,9 +16,12 @@ Route::post('/user/register', 'UserController@register');
 
 Route::group(['middleware' => 'auth:api'], function(){
 
-	Route::get('/listkategori','KategoriController@getDataKategori');
+    Route::get('/listkategori','KategoriController@getDataKategori');
+    //=============================|User|=========================================    
     Route::get('/user', 'UserController@user');
     Route::patch('/user', 'UserController@update');
+    Route::patch('/user/profile/updateimage', 'UserController@updateProfile');
+    Route::patch('/user/profile/deleteimage', 'UserController@destroyProfile');
     //=============================|End|=========================================
     //=============================|Category|=========================================
     Route::get('/category','ToDoController@category');

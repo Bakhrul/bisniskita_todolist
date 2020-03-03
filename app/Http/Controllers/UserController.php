@@ -8,6 +8,8 @@ use DB;
 use App\User;
 use Hash;
 use Carbon\Carbon;
+use File;
+
 class UserController extends Controller
 {
       public function user()
@@ -62,6 +64,38 @@ class UserController extends Controller
     	}
     }
 
+     public function updateProfile(Request $request)
+    {
+        DB::BeginTransaction();
+        try {
+            $ext = pathinfo($request->pathname, PATHINFO_EXTENSION);
+            $ext = str_replace("'", "", $ext);
+            $image = $request->file64;
+            $image = str_replace('data:image/png;base64,', '', $image);
+            $image = str_replace(' ', '+', $image);
+
+            $imageName = date("ymdhis").'_'.Auth::user()->us_name.'.'.$ext;
+            $path = storage_path(). '/profile/' ;
+
+            if (!File::isDirectory($path)) {
+                File::makeDirectory($path, 0777, true, true);
+            }
+
+            \File::put($path . $imageName, base64_decode($image));
+            
+            $data = User::find(Auth::user()->us_id);
+            $data->us_image = $imageName;
+            $data->update();
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'data' => $imageName
+            ]);
+        } catch (\Throwable $th) {
+            throw $th;
+        }
+    }
+
    public function register(Request $request){
 
     	if($request->type_platform == 'android'){
@@ -109,6 +143,23 @@ class UserController extends Controller
             DB::rollback();
             throw $e;
             return response()->json('status','error');
+        }
+    }
+
+     public function destroyProfile(Request $request)
+    {
+        DB::BeginTransaction();
+        try {
+            $data = User::find(Auth::user()->us_id);
+            unlink(storage_path('profile/'.Auth::user()->us_image));
+            $data->us_image = NULL;
+            $data->update();
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        } catch (\Throwable $th) {
+            //throw $th;
+            DB::rollback();
+            return $th;
         }
     }
 }

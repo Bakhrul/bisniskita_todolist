@@ -24,12 +24,11 @@ class ToDoController extends Controller
     public function getRequestDownloadFile()
     {
         return response()->download(storage_path("app/public/{$filename}"));
-
     }
 
     public function getTodoAction($id)
     {
-        $data = DB::table('d_todolist_action')->join('d_todolist','tla_todolist','tl_id')->where('tla_todolist',$id)->get();
+        $data = DB::table('d_todolist_action')->join('d_todolist', 'tla_todolist', 'tl_id')->where('tla_todolist', $id)->get();
         $datas = array();
         foreach ($data as $key => $value) {
             $arr = [
@@ -69,11 +68,11 @@ class ToDoController extends Controller
             $q->on('tlr_todolist', 'tl_id');
             $q->leftJoin('d_project', 'tl_project', 'p_id');
         })
-        ->where(function($q){
-            $q->orWhere('tl_status','Finish');
-            $q->orWhere('p_status','Finish');
+        ->where(function ($q) {
+            $q->orWhere('tl_status', 'Finish');
+            $q->orWhere('p_status', 'Finish');
         })
-        // 
+        //
         ->where('tlr_users', Auth::user()->us_id)
         ->groupBy('p_id')
         ->get();
@@ -155,19 +154,19 @@ class ToDoController extends Controller
                 'email' => $value->us_email,
             ];
             array_push($datas, $arr);
-        }     
+        }
         return response()->json($datas);
     }
 
     public function category()
     {
-        $data = DB::table('m_category')->orderBy('c_name', 'ASC')->where('c_user', null)->get();
-        $dataFromUser = DB::table('m_category')->orderBy('c_name', 'ASC')->where('c_user', Auth::user()->us_id)->get();
-        $datax = $data->merge($dataFromUser);
-        $sorted = $datax->sortBy('c_name');
-        $sorted->values()->all();
+        $data = DB::table('m_category')
+                ->where('c_user',null)
+                ->orWhere('c_user',Auth::user()->us_id)
+                ->orderBy('c_name','ASC')
+                ->get();
         $datas = array();
-        foreach ($sorted as $key => $value) {
+        foreach ($data as $key => $value) {
             $arr = [
                 'id' => $value->c_id,
                 'name'=> $value->c_name
@@ -197,29 +196,29 @@ class ToDoController extends Controller
                 $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
             })->get();
         } elseif ($type == "2") {
-            // return response()->json(Carbon::tomorrow());
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::today());
-                $q->where("tl_planend", '<=', Carbon::today()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::today()->setTime(23, 59, 59));
+                $q->where("tl_planend", '>=', Carbon::today());
             })->get();
         } elseif ($type == "3") {
-            // return ;
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::tomorrow())
-            ->Where('tl_planend', '<=', Carbon::tomorrow()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::tomorrow()->setTime(23, 59, 59))
+            ->Where('tl_planend', '>=', Carbon::tomorrow());
             })->get();
         } elseif ($type == "4") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::tomorrow()->addDay())
-                ->where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59))
+                ->where('tl_planend', '>=', Carbon::tomorrow()->addDay());
             })->get();
         } elseif ($type == "5") {
             $data = $data->where(function ($q) {
-                $q->whereBetween("tl_planend", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
+                $q->whereBetween("tl_planstart", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)->setTime(23, 59, 59)]);
+                $q->OrWhereBetween("tl_planend", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)->setTime(23, 59, 59)]);
             })->get();
         } elseif ($type == "6") {
             $data = $data->where(function ($q) {
-                $q->whereMonth("tl_planend", '=', Carbon::now()->month);
+                $q->where('tl_planstart', '<=', Carbon::now()->lastOfMonth()->setTime(23, 59, 59))
+               ->where('tl_planend', '>=', Carbon::now()->firstOfMonth());
             })->get();
         } else {
             $data = $data->where(function ($q) {
@@ -228,14 +227,28 @@ class ToDoController extends Controller
         }
 
         foreach ($data as $key => $value) {
+            $statusProgress = '';
+            if ($value->tl_status == 'Finish') {
+                $statusProgress = 'compleshed';
+            } elseif ($value->tl_status == 'Pending') {
+                $statusProgress = 'pending';
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->progress < 100) {
+                $statusProgress = 'overdue';
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->progress < 100) {
+                $statusProgress = 'working';
+            } else {
+                $statusProgress = 'working';
+            }
             $arr = [
                 'id'    => $value->tl_id,
                 'title' => $value->tl_title,
                 'start' => $value->tl_planstart,
                 'end'   => $value->tl_planend,
                 'status' => $value->tl_status,
+                'allday' => (int)$value->tl_allday,
                 'category' => $value->tl_category,
                 'statuspinned' => $value->tli_todolist,
+                'statusprogress'    => $statusProgress
             ];
             array_push($todos, $arr);
         }
@@ -271,7 +284,6 @@ class ToDoController extends Controller
     public function todolist_berbintang(Request $request)
     {
         $type = $request->filter;
-
         $data = DB::table('d_todolist_important')
                 ->join('d_todolist_roles', function ($join) {
                     $join->on('d_todolist_important.tli_todolist', '=', 'd_todolist_roles.tlr_todolist')
@@ -280,33 +292,35 @@ class ToDoController extends Controller
                 ->join('d_todolist', 'tli_todolist', 'tl_id')
                 ->where('tl_title', 'LIKE', $request->search .'%')
                   ->groupBy('tl_id');
-        
+
         if ($type == "1") {
             $data = $data->where(function ($q) {
                 $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
             })->get();
         } elseif ($type == "2") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::today());
-                $q->where("tl_planend", '<=', Carbon::today()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::today()->setTime(23, 59, 59));
+                $q->where("tl_planend", '>=', Carbon::today());
             })->get();
         } elseif ($type == "3") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::tomorrow())
-            ->Where('tl_planend', '<=', Carbon::tomorrow()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::tomorrow()->setTime(23, 59, 59))
+            ->Where('tl_planend', '>=', Carbon::tomorrow());
             })->get();
         } elseif ($type == "4") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::tomorrow()->addDay())
-                ->where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59))
+                ->where('tl_planend', '>=', Carbon::tomorrow()->addDay());
             })->get();
         } elseif ($type == "5") {
             $data = $data->where(function ($q) {
-                $q->whereBetween("tl_planend", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
+                $q->whereBetween("tl_planstart", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)->setTime(23, 59, 59)]);
+                $q->OrWhereBetween("tl_planend", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)->setTime(23, 59, 59)]);
             })->get();
         } elseif ($type == "6") {
             $data = $data->where(function ($q) {
-                $q->whereMonth("tl_planend", '=', Carbon::now()->month);
+                $q->where('tl_planstart', '<=', Carbon::now()->lastOfMonth()->setTime(23, 59, 59))
+               ->where('tl_planend', '>=', Carbon::now()->firstOfMonth());
             })->get();
         } else {
             $data = $data->where(function ($q) {
@@ -314,8 +328,38 @@ class ToDoController extends Controller
             })->get();
         }
 
+        $todos = array();
+
+        foreach ($data as $key => $value) {
+            $statusProgress = '';
+            if ($value->tl_status == 'Finish') {
+                $statusProgress = 'compleshed';
+            } elseif ($value->tl_status == 'Pending') {
+                $statusProgress = 'pending';
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
+                $statusProgress = 'overdue';
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
+                $statusProgress = 'working';
+            } else {
+                $statusProgress = 'working';
+            }
+
+            $arr = [
+                'id'    => $value->tl_id,
+                'title' => $value->tl_title,
+                'start' => $value->tl_planstart,
+                'end'   => $value->tl_planend,
+                'status' => $value->tl_status,
+                'allday' => (int)$value->tl_allday,
+                'category' => $value->tl_category,
+                'statuspinned' => $value->tli_todolist,
+                'statusprogress'    => $statusProgress
+            ];
+            array_push($todos, $arr);
+        }
+
         return response()->json([
-            'todo' => $data,
+            'todo' => $todos,
             'counttodo' => count($data),
         ]);
     }
@@ -341,33 +385,34 @@ class ToDoController extends Controller
             })->get();
         } elseif ($type == "2") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::today());
-                $q->where("tl_planend", '<=', Carbon::today()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::today()->setTime(23, 59, 59));
+                $q->where("tl_planend", '>=', Carbon::today());
             })->get();
         } elseif ($type == "3") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::tomorrow())
-            ->Where('tl_planend', '<=', Carbon::tomorrow()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::tomorrow()->setTime(23, 59, 59))
+            ->Where('tl_planend', '>=', Carbon::tomorrow());
             })->get();
         } elseif ($type == "4") {
             $data = $data->where(function ($q) {
-                $q->where("tl_planend", '>', Carbon::tomorrow()->addDay())
-                ->where('tl_planend', '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59));
+                $q->where("tl_planstart", '<=', Carbon::tomorrow()->addDay()->setTime(23, 59, 59))
+                ->where('tl_planend', '>=', Carbon::tomorrow()->addDay());
             })->get();
         } elseif ($type == "5") {
             $data = $data->where(function ($q) {
-                $q->whereBetween("tl_planend", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)]);
+                $q->whereBetween("tl_planstart", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)->setTime(23, 59, 59)]);
+                $q->OrWhereBetween("tl_planend", [Carbon::now()->startOfWeek(Carbon::SUNDAY),Carbon::now()->endOfWeek(Carbon::SATURDAY)->setTime(23, 59, 59)]);
             })->get();
         } elseif ($type == "6") {
             $data = $data->where(function ($q) {
-                $q->whereMonth("tl_planend", '=', Carbon::now()->month);
+                $q->where('tl_planstart', '<=', Carbon::now()->lastOfMonth()->setTime(23, 59, 59))
+               ->where('tl_planend', '>=', Carbon::now()->firstOfMonth());
             })->get();
         } else {
             $data = $data->where(function ($q) {
                 $q->where('tl_status', '=', 'Pending');
             })->get();
         }
-
         
         $Project = DB::table('d_project_member')
                     ->join('d_project', 'mp_project', 'p_id')
@@ -375,8 +420,38 @@ class ToDoController extends Controller
                     ->where('mp_user', Auth::user()->us_id)
                     ->get();
 
+         $todos = array();
+
+        foreach ($data as $key => $value) {
+            $statusProgress = '';
+            if ($value->tl_status == 'Finish') {
+                $statusProgress = 'compleshed';
+            } elseif ($value->tl_status == 'Pending') {
+                $statusProgress = 'pending';
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
+                $statusProgress = 'overdue';
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
+                $statusProgress = 'working';
+            } else {
+                $statusProgress = 'working';
+            }
+
+            $arr = [
+                'id'    => $value->tl_id,
+                'title' => $value->tl_title,
+                'start' => $value->tl_planstart,
+                'end'   => $value->tl_planend,
+                'status' => $value->tl_status,
+                'allday' => (int)$value->tl_allday,
+                'category' => $value->tl_category,
+                'statuspinned' => $value->tli_todolist,
+                'statusprogress'    => $statusProgress
+            ];
+            array_push($todos, $arr);
+        }
+
         return response()->json([
-            'todo' => $data,
+            'todo' => $todos,
             'counttodo' => count($data),
             'project' => $Project,
             'countproject' => count($Project),
@@ -472,11 +547,7 @@ class ToDoController extends Controller
             }
 
             \File::put($path . $imageName, base64_decode($image));
-            // Storage::disk('local')->put($imageName, base64_decode($image));
-            // $path = Storage::putFile($path . $imageName, base64_decode($image));
-
-
-
+            
             $data = new Attachment;
             $data->tla_path = $imageName;
             $data->tla_todolist = $request->todolist;
@@ -499,7 +570,7 @@ class ToDoController extends Controller
         $member = DB::table('d_todolist_roles')
                 ->join('m_users', 'tlr_users', 'us_id')
                 ->where('tlr_todolist', $request->todolist)
-                ->orderBy('tlr_role','ASC')
+                ->orderBy('tlr_role', 'ASC')
                 ->groupBy('tlr_users')
                 ->get();
 
@@ -517,15 +588,14 @@ class ToDoController extends Controller
 
             ];
 
-            array_push($dataFile,$arr);
-            
+            array_push($dataFile, $arr);
         }
 
 
         $statusKita = DB::table('d_todolist_roles')
-                    ->where('tlr_todolist',$request->todolist)
-                    ->where('tlr_users',Auth::user()->us_id)
-                    ->orderBy('tlr_role','ASC')
+                    ->where('tlr_todolist', $request->todolist)
+                    ->where('tlr_users', Auth::user()->us_id)
+                    ->orderBy('tlr_role', 'ASC')
                     ->first();
 
         return response()->json([
@@ -573,7 +643,7 @@ class ToDoController extends Controller
         try {
             switch ($request->type) {
                 case 'Action':
-                    $subId = DB::table('d_todolist_action')->where('tla_todolist',$request->todo)->max('tla_number') + 1;
+                    $subId = DB::table('d_todolist_action')->where('tla_todolist', $request->todo)->max('tla_number') + 1;
                     DB::table('d_todolist_action')->insert([
                         'tla_todolist' => $request->todo,
                         'tla_number' => $subId,
@@ -585,7 +655,7 @@ class ToDoController extends Controller
                     break;
 
                 case 'Ready':
-                     $subId = DB::table('d_todolist_ready')->where('tlr_todolist',$request->todo)->max('tlr_number') + 1;
+                     $subId = DB::table('d_todolist_ready')->where('tlr_todolist', $request->todo)->max('tlr_number') + 1;
                     DB::table('d_todolist_ready')->insert([
                         'tlr_todolist' => $request->todo,
                         'tlr_number' => $subId,
@@ -596,7 +666,7 @@ class ToDoController extends Controller
                     break;
 
                 case 'Normal':
-                    $subId = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->max('tln_number') + 1;
+                    $subId = DB::table('d_todolist_normal')->where('tln_todolist', $request->todo)->max('tln_number') + 1;
                     DB::table('d_todolist_normal')->insert([
                         'tln_todolist' => $request->todo,
                         'tln_number' => $subId,
@@ -607,7 +677,7 @@ class ToDoController extends Controller
                     break;
 
                 case 'Done':
-                    $subId = DB::table('d_todolist_done')->where('tld_todolist',$request->todo)->max('tld_number') + 1;
+                    $subId = DB::table('d_todolist_done')->where('tld_todolist', $request->todo)->max('tld_number') + 1;
                      DB::table('d_todolist_done')->insert([
                         'tld_todolist' => $request->todo,
                         'tld_number' => $subId,
@@ -720,7 +790,7 @@ class ToDoController extends Controller
                     ->join('m_users', 'tlr_users', 'us_id')
                     ->join('m_roles', 'tlr_role', 'r_id')
                     ->where('tlr_todolist', $id)
-                    ->orderBy('tlr_role','ASC')
+                    ->orderBy('tlr_role', 'ASC')
                     ->groupBy('tlr_users')
                     ->get();
         $documentTodo = DB::table('d_todolist_attachment')
@@ -755,8 +825,8 @@ class ToDoController extends Controller
             switch ($request->type) {
                 case 'Action':
                     $cekData = DB::table('d_todolist_action')
-                              ->where('tla_todolist',$request->todo)
-                              ->where('tla_number',$id)
+                              ->where('tla_todolist', $request->todo)
+                              ->where('tla_number', $id)
                               ->first();
 
                     if($cekData->tla_executed == null){
@@ -774,8 +844,8 @@ class ToDoController extends Controller
                     }
 
                     DB::table('d_todolist_action')
-                    ->where('tla_todolist',$request->todo)
-                    ->where('tla_number',$id)
+                    ->where('tla_todolist', $request->todo)
+                    ->where('tla_number', $id)
                     ->update([
                         'tla_executed' => $executedDate,
                         'tla_executeduser'  => $executedUser,
@@ -787,8 +857,8 @@ class ToDoController extends Controller
                 case 'Done':
 
                     $cekData = DB::table('d_todolist_done')
-                                ->where('tld_todolist',$request->todo)
-                                ->where('tld_number',$id)
+                                ->where('tld_todolist', $request->todo)
+                                ->where('tld_number', $id)
                                 ->first();
 
                    if($cekData->tld_executed == null){
@@ -806,8 +876,8 @@ class ToDoController extends Controller
                     }
 
                      DB::table('d_todolist_done')
-                    ->where('tld_todolist',$request->todo)
-                    ->where('tld_number',$id)
+                    ->where('tld_todolist', $request->todo)
+                    ->where('tld_number', $id)
                     ->update([
                         'tld_executed' => $executedDate,
                         'tld_executeduser' => $executedUser,
@@ -819,7 +889,7 @@ class ToDoController extends Controller
                 break;
                 case 'Normal':
 
-                    $cekData = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->where('tln_number',$id)->first();
+                    $cekData = DB::table('d_todolist_normal')->where('tln_todolist', $request->todo)->where('tln_number', $id)->first();
 
                     if($cekData->tln_executed == null){
                         $executedDate = Carbon::now('Asia/Jakarta');
@@ -836,8 +906,8 @@ class ToDoController extends Controller
                     }
 
                      DB::table('d_todolist_normal')
-                    ->where('tln_todolist',$request->todo)
-                    ->where('tln_number',$id)
+                    ->where('tln_todolist', $request->todo)
+                    ->where('tln_number', $id)
                     ->update([
                         'tln_executed' => $executedDate,
                         'tln_executeduser' => $executedUser,
@@ -863,8 +933,8 @@ class ToDoController extends Controller
                         $validationUser = null;
                     }
                      DB::table('d_todolist_ready')
-                    ->where('tlr_todolist',$request->todo)
-                    ->where('tlr_number',$id)
+                    ->where('tlr_todolist', $request->todo)
+                    ->where('tlr_number', $id)
                     ->update([
                         'tlr_executed' => $executedDate,
                         'tlr_executeduser' => $executedUser,
@@ -1090,41 +1160,44 @@ class ToDoController extends Controller
             'todo_ready' => $todoReady,
         ]);
     }
-     public function todo_normal($id){
-        $todoReady = DB::table('d_todolist_normal')->where('tln_todolist',$id)->get();
+    public function todo_normal($id)
+    {
+        $todoReady = DB::table('d_todolist_normal')->where('tln_todolist', $id)->get();
         return response()->json([
             'todo_normal' => $todoReady,
         ]);
     }
-     public function todo_done($id){
-        $todoReady = DB::table('d_todolist_done')->where('tld_todolist',$id)->get();
+    public function todo_done($id)
+    {
+        $todoReady = DB::table('d_todolist_done')->where('tld_todolist', $id)->get();
         return response()->json([
             'todo_done' => $todoReady,
         ]);
     }
-    public function validation_listtodo(Request $request){
+    public function validation_listtodo(Request $request)
+    {
         DB::BeginTransaction();
-        try {            
+        try {
             $id = $request->id;
             switch ($request->type) {
                 case 'Action':
 
                     $cekData = DB::table('d_todolist_action')
-                              ->where('tla_todolist',$request->todo)
-                              ->where('tla_number',$id)
+                              ->where('tla_todolist', $request->todo)
+                              ->where('tla_number', $id)
                               ->first();
 
-                    if($cekData->tla_validation == null){
+                    if ($cekData->tla_validation == null) {
                         $done = Carbon::now('Asia/Jakarta');
                         $status = 'validation';
-                    }else{
+                    } else {
                         $done = null;
                         $status = 'belum validation';
                     }
 
                     DB::table('d_todolist_action')
-                    ->where('tla_todolist',$request->todo)
-                    ->where('tla_number',$id)
+                    ->where('tla_todolist', $request->todo)
+                    ->where('tla_number', $id)
                     ->update([
                         'tla_validation' => $done,
                     ]);
@@ -1133,21 +1206,21 @@ class ToDoController extends Controller
                 case 'Done':
 
                     $cekData = DB::table('d_todolist_done')
-                                ->where('tld_todolist',$request->todo)
-                                ->where('tld_number',$id)
+                                ->where('tld_todolist', $request->todo)
+                                ->where('tld_number', $id)
                                 ->first();
 
-                    if($cekData->tld_validation == null){
+                    if ($cekData->tld_validation == null) {
                         $done = Carbon::now('Asia/Jakarta');
                         $status = 'validation';
-                    }else{
+                    } else {
                         $done = null;
                         $status = 'belum validation';
                     }
 
                      DB::table('d_todolist_done')
-                    ->where('tld_todolist',$request->todo)
-                    ->where('tld_number',$id)
+                    ->where('tld_todolist', $request->todo)
+                    ->where('tld_number', $id)
                     ->update([
                         'tld_validation' => $done,
                     ]);
@@ -1156,19 +1229,19 @@ class ToDoController extends Controller
                 break;
                 case 'Normal':
 
-                    $cekData = DB::table('d_todolist_normal')->where('tln_todolist',$request->todo)->where('tln_number',$id)->first();
+                    $cekData = DB::table('d_todolist_normal')->where('tln_todolist', $request->todo)->where('tln_number', $id)->first();
 
-                    if($cekData->tln_validation == null){
+                    if ($cekData->tln_validation == null) {
                         $done = Carbon::now('Asia/Jakarta');
                         $status = 'validation';
-                    }else{
+                    } else {
                         $done = null;
                         $status = 'belum validation';
                     }
 
                      DB::table('d_todolist_normal')
-                    ->where('tln_todolist',$request->todo)
-                    ->where('tln_number',$id)
+                    ->where('tln_todolist', $request->todo)
+                    ->where('tln_number', $id)
                     ->update([
                         'tln_validation' => $done,
                     ]);
@@ -1176,18 +1249,18 @@ class ToDoController extends Controller
                 break;
                 case 'Ready':
 
-                    $cekData = DB::table('d_todolist_ready')->where('tlr_todolist',$request->todo)->where('tlr_number',$id)->first();
-                    if($cekData->tlr_validation == null){
+                    $cekData = DB::table('d_todolist_ready')->where('tlr_todolist', $request->todo)->where('tlr_number', $id)->first();
+                    if ($cekData->tlr_validation == null) {
                         $done = Carbon::now('Asia/Jakarta');
                         $status = 'validation';
-                    }else{
+                    } else {
                         $done = null;
                         $status = 'belum validation';
                     }
 
                      DB::table('d_todolist_ready')
-                    ->where('tlr_todolist',$request->todo)
-                    ->where('tlr_number',$id)
+                    ->where('tlr_todolist', $request->todo)
+                    ->where('tlr_number', $id)
                     ->update([
                         'tlr_validation' => $done,
                     ]);
@@ -1207,23 +1280,24 @@ class ToDoController extends Controller
             DB::rollback();
         }
     }
-    public function started_todo(Request $request){
+    public function started_todo(Request $request)
+    {
         setlocale(LC_TIME, 'IND');
         DB::BeginTransaction();
         try {
             switch ($request->type) {
                 case 'baru mengerjakan':
-                     DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                     DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                         'tl_exestart' => Carbon::now('Asia/Jakarta'),
                     ]);
                     break;
                 case 'pending':
-                         DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                         DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                             'tl_status' => 'Pending',
                         ]);
                     break;
                 case 'selesai':
-                         DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                         DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                              'tl_exeend' => Carbon::now('Asia/Jakarta'),
                              'tl_status' => 'Finish',
                              'tl_progress' => 100,
@@ -1237,7 +1311,7 @@ class ToDoController extends Controller
                          ]);
                     break;
                 case 'mulai mengerjakan kembali':
-                         DB::table('d_todolist')->where('tl_id',$request->todo)->update([
+                         DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                              'tl_status' => 'Open',
                         ]);
                         break;
@@ -1250,7 +1324,6 @@ class ToDoController extends Controller
             return response()->json([
                 'status' => 'success',
             ]);
-
         } catch (Exception $e) {
             DB::rollback();
             return $e;
