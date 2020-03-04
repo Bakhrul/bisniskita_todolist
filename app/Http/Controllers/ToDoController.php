@@ -232,11 +232,11 @@ class ToDoController extends Controller
                 $statusProgress = 'compleshed';
             } elseif ($value->tl_status == 'Pending') {
                 $statusProgress = 'pending';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->progress < 100) {
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->progress < 100) {
-                $statusProgress = 'working';
-            } else {
+            } elseif ($value->tl_status == 'Open' && $value->tl_exestart == null) {
+                $statusProgress = 'waiting';
+            } elseif($value->tl_status == 'Open' && $value->tl_exestart != null) {
                 $statusProgress = 'working';
             }
             $arr = [
@@ -338,9 +338,9 @@ class ToDoController extends Controller
                 $statusProgress = 'pending';
             } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
-                $statusProgress = 'working';
-            } else {
+            } elseif ($value->tl_status == 'Open' && $value->tl_exestart == null) {
+                $statusProgress = 'waiting';
+            } elseif($value->tl_status == 'Open' && $value->tl_exestart != null) {
                 $statusProgress = 'working';
             }
 
@@ -430,9 +430,9 @@ class ToDoController extends Controller
                 $statusProgress = 'pending';
             } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
-                $statusProgress = 'working';
-            } else {
+            } elseif ($value->tl_status == 'Open' && $value->tl_exestart == null) {
+                $statusProgress = 'waiting';
+            } elseif($value->tl_status == 'Open' && $value->tl_exestart != null) {
                 $statusProgress = 'working';
             }
 
@@ -796,10 +796,13 @@ class ToDoController extends Controller
         $documentTodo = DB::table('d_todolist_attachment')
                         ->where('tla_todolist', $id)
                         ->get();
+        $statusKita = DB::table('d_todolist_roles')->where('tlr_users',Auth::user()->us_id)->orderBy('tlr_role','ASC')->first();
+
         return response()->json([
             'todo' => $todo,
             'member_todo' => $MemberTodo,
             'document_todo' => $documentTodo,
+            'statuskita' => $statusKita,
         ]);
     }
 
@@ -1337,5 +1340,29 @@ class ToDoController extends Controller
                         ->orderBy('tlt_id', 'Desc')
                         ->get();
         return response()->json($TodoActivity);
+    }
+
+    public function delete_todo(Request $request){
+        DB::BeginTransaction();
+        try {
+            
+            DB::table('d_todolist')->where('tl_id',$request->todolist)->delete();
+            DB::table('d_todolist_action')->where('tla_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_attachment')->where('tla_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_important')->where('tli_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_normal')->where('tln_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_ready')->where('tlr_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_roles')->where('tlr_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_timeline')->where('tlt_todolist',$request->todolist)->delete();
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
     }
 }
