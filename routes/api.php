@@ -58,6 +58,7 @@ Route::group(['middleware' => 'auth:api'], function(){
 
     //=============================|Project|=========================================
     Route::get('/history', 'ToDoController@getHistory');
+    Route::get('/archive', 'ToDoController@getArchive');
 
     Route::post('/actionpinned_todo','ToDoController@actionpinned_todo');
     Route::post('/todolist_berbintang','ToDoController@todolist_berbintang');

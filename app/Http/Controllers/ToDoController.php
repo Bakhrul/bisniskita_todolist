@@ -66,47 +66,72 @@ class ToDoController extends Controller
     {
         $data = todolistRole::leftJoin('d_todolist', function ($q) {
             $q->on('tlr_todolist', 'tl_id');
-            $q->leftJoin('d_project', 'tl_project', 'p_id');
         })
         ->where(function ($q) {
-            $q->orWhere('tl_status', 'Finish');
-            $q->orWhere('p_status', 'Finish');
+            $q->Where('tl_status', 'Finish');
         })
         //
         ->where('tlr_users', Auth::user()->us_id)
-        ->groupBy('p_id')
+        ->groupBy('tl_id')
         ->get();
 
         $datas = array(
             
         );
         foreach ($data as $key => $value) {
-            if ($value->p_id != '') {
-                $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
-                $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
-                $percent = (($sum/$count)/100);
-                $arr = [
-                    'id' => $value->p_id,
-                    'title' => $value->p_name,
-                    'start' => $value->p_timestart,
-                    'end'   => $value->p_timeend,
-                    'status' =>$value->p_status,
-                    'progress' =>$percent,
-                    'isproject' =>true
-                ];
-                array_push($datas, $arr);
-            } else {
+                // $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
+                // $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
+
+                // $percent = $count > 0 ? round(((($sum/$count) / 100) * 100), 2) : 0;
+
                 $arr = [
                     'id' => $value->tl_id,
                     'title' => $value->tl_title,
                     'start' => $value->tl_planstart,
                     'end'   => $value->tl_planend,
                     'status' =>$value->tl_status,
-                    'progress' => floatval($value->tl_progress/100),
-                    'isproject' =>false
+                    'progress' => $value->tl_progress,
+                    'allday' =>$value->tl_allday
                 ];
                 array_push($datas, $arr);
-            }
+            
+        }
+        return response()->json($datas);
+    }
+
+    public function getArchive()
+    {
+        $data = todolistRole::leftJoin('d_todolist', function ($q) {
+            $q->on('tlr_todolist', 'tl_id');
+        })
+        ->where(function ($q) {
+            $q->Where('tl_status', 'Pending');
+        })
+        //
+        ->where('tlr_users', Auth::user()->us_id)
+        ->groupBy('tl_id')
+        ->get();
+
+        $datas = array(
+            
+        );
+        foreach ($data as $key => $value) {
+                // $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
+                // $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
+
+                // $percent = $count > 0 ? round(((($sum/$count) / 100) * 100), 2) : 0;
+
+                $arr = [
+                    'id' => $value->tl_id,
+                    'title' => $value->tl_title,
+                    'start' => $value->tl_planstart,
+                    'end'   => $value->tl_planend,
+                    'status' =>$value->tl_status,
+                    'progress' => $value->tl_progress,
+                    'allday' =>$value->tl_allday
+                ];
+                array_push($datas, $arr);
+            
         }
         return response()->json($datas);
     }
@@ -232,9 +257,9 @@ class ToDoController extends Controller
                 $statusProgress = 'compleshed';
             } elseif ($value->tl_status == 'Pending') {
                 $statusProgress = 'pending';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->progress < 100) {
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->progress < 100) {
+            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'working';
             } else {
                 $statusProgress = 'working';

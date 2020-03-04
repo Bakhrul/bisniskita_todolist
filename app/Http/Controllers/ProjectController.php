@@ -36,20 +36,35 @@ class ProjectController extends Controller
         $dtx = array();
         // return response()->json()
         foreach ($data as $key => $value) {
+//  calculate percent todo
+            $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
+            $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
+
+            $percent = $count > 0 ? round(((($sum/$count) / 100) * 100), 2) : 0;
+// status progress
+             $statusProgress = '';
+            if ($value->p_status == 'Finish') {
+                $statusProgress = 'compleshed';
+            } elseif ($value->p_status == 'Pending') {
+                $statusProgress = 'pending';
+            } elseif ($value->p_status == 'Open' && $value->p_timeend < Carbon::today() && $percent < 100) {
+                $statusProgress = 'overdue';
+            } elseif ($value->p_status == 'Open' && $value->p_timeend > Carbon::today() && $percent < 100) {
+                $statusProgress = 'working';
+            } else {
+                $statusProgress = 'working';
+            }
 
             $arrProj = [
                 'id' => $value->p_id,
                 'title' => $value->p_name,
                 'created_date' => $value->p_timestart,
+                'finish_date' => $value->p_timeend,
                 'members'=> [],
                 'member_total'=> '',
-                'percent'=> ''
+                'percent'=> '',
+                'status' => $statusProgress
             ];
-
-            $sum = DB::table('d_todolist')->where('tl_project', $value->p_id)->sum('tl_progress');
-            $count = DB::table('d_todolist')->where('tl_project', $value->p_id)->count('tl_progress');
-
-            $percent = $count > 0 ? round(((($sum/$count) / 100) * 100),2) : 0;
 
             $arrProj['percent'] = $percent;        
             foreach ($value['role'] as $key2 => $valueRole) {
@@ -75,6 +90,19 @@ class ProjectController extends Controller
         $datas = array();
 
         foreach($data as $value){
+            $statusProgress = '';
+            if ($value->p_status == 'Finish') {
+                $statusProgress = 'compleshed';
+            } elseif ($value->p_status == 'Pending') {
+                $statusProgress = 'pending';
+            } elseif ($value->p_status == 'Open' && $value->p_timestart < Carbon::today() && $value->tl_progress < 100) {
+                $statusProgress = 'overdue';
+            } elseif ($value->p_status == 'Open' && $value->p_timestart > Carbon::today() && $value->tl_progress < 100) {
+                $statusProgress = 'working';
+            } else {
+                $statusProgress = 'working';
+            }
+
             $arr = [
                 'id'    => $value->p_id,
                 'title' => $value->p_name,
