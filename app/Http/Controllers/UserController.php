@@ -53,6 +53,8 @@ class UserController extends Controller
 	    }else{
 	    	$data = User::find(Auth::user()->us_id);
 	    	$data->us_name = $request->name;
+	    	$data->us_phone = $request->phone;
+	    	$data->us_address = $request->address;
 	    	$data->update();
 	    	DB::commit();
 	    	 return response(['status'=>'success','data'=>Auth::user()->us_image],200);
@@ -75,7 +77,7 @@ class UserController extends Controller
             $image = str_replace(' ', '+', $image);
 
             $imageName = date("ymdhis").'_'.Auth::user()->us_name.'.'.$ext;
-            $path = storage_path(). '/profile/' ;
+            $path = storage_path(). '/image/profile/' ;
 
             if (!File::isDirectory($path)) {
                 File::makeDirectory($path, 0777, true, true);
