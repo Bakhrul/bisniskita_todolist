@@ -71,7 +71,7 @@ class ProjectController extends Controller
                 $arrUser = [
                     'id' => $valueRole['user']->us_id,
                     'name' => $valueRole['user']->us_name,
-                    'path' => $valueRole['user']->us_photo,
+                    'path' => $valueRole['user']->us_image,
                 ];
 
                 array_push($arrProj['members'],$arrUser);
@@ -155,16 +155,21 @@ class ProjectController extends Controller
                     ->join('m_users','mp_user','us_id')
                     ->join('m_roles','mp_role','r_id')
                     ->where('mp_project',$request->project)
+                    ->orderBy('mp_role','ASC')
                     ->get();
 
         $getTodo = DB::table('d_todolist')
                     ->where('tl_project',$request->project)
                     ->get();
         $project = DB::table('d_project')->where('p_id',$request->project)->first();
+
+        $statusKita = DB::table('d_project_member')->where('mp_user',Auth::user()->us_id)->where('mp_project',$request->project)->first();
+
         return response()->json([
             'member' => $getMember,
             'todo' => $getTodo,
             'project' => $project,
+            'statuskita' => $statusKita,
         ]);
 
     }
@@ -391,6 +396,7 @@ class ProjectController extends Controller
                 ->where('mp_project',$request->project)
                 ->join('m_users','mp_user','us_id')
                 ->get();
+        $statusKita = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user',Auth::user()->us_id)->first();
 
         $ProgressTodo = 0;
         $ProgressProject = 0.00;
@@ -410,6 +416,7 @@ class ProjectController extends Controller
             'todo' => $Todo,
             'member' => $Member,
             'progressproject' => $ProgressProject,
+            'statusKita' => $statusKita,
         ]);
     }
     public function detail_member_project(Request $request){
@@ -477,6 +484,49 @@ class ProjectController extends Controller
             return $e;
         }
     }
+    public function delete_project(Request $request){
+        DB::beginTransaction();
+        try {
+            
+            DB::table('d_project')->where('p_id',$request->project)->delete();
+
+            $dataMemberProject = DB::table('d_project_member')->where('mp_project',$request->project)->delete();
+
+            $todoProject = DB::table('d_todolist')->where('tl_project',$request->project)->get();
+
+            foreach ($todoProject as $key => $value) {
+
+                DB::table('d_todolist_action')->where('tla_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_ready')->where('tlr_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_done')->where('tld_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_normal')->where('tln_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_important')->where('tli_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_roles')->where('tlr_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_timeline')->where('tlt_todolist',$value->tl_id)->delete();
+
+                DB::table('d_todolist_attachment')->where('tla_todolist',$value->tl_id)->delete();
+
+            }
+
+            DB::table('d_todolist')->where('tl_project',$request->project)->delete();
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+
     /**
      * Show the form for creating a new resource.
      *

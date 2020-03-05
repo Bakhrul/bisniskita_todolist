@@ -154,8 +154,10 @@ class ToDoController extends Controller
         foreach ($data as $key => $value) {
             $arr = [
                 'id' => $value->us_id,
+                'image' => $value->us_image,
                 'name' => $value->us_name,
                 'email' => $value->us_email,
+                'idaccess' => $value->r_id,
                 'access' => $value->r_name,
                 'todo' => $value->tlr_todolist,
             ];
@@ -259,9 +261,9 @@ class ToDoController extends Controller
                 $statusProgress = 'pending';
             } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
-                $statusProgress = 'working';
-            } else {
+            } elseif ($value->tl_status == 'Open' && $value->tl_exestart == null) {
+                $statusProgress = 'waiting';
+            } elseif($value->tl_status == 'Open' && $value->tl_exestart != null) {
                 $statusProgress = 'working';
             }
             $arr = [
@@ -363,9 +365,9 @@ class ToDoController extends Controller
                 $statusProgress = 'pending';
             } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
-                $statusProgress = 'working';
-            } else {
+            } elseif ($value->tl_status == 'Open' && $value->tl_exestart == null) {
+                $statusProgress = 'waiting';
+            } elseif($value->tl_status == 'Open' && $value->tl_exestart != null) {
                 $statusProgress = 'working';
             }
 
@@ -455,9 +457,9 @@ class ToDoController extends Controller
                 $statusProgress = 'pending';
             } elseif ($value->tl_status == 'Open' && $value->tl_planend < Carbon::today() && $value->tl_progress < 100) {
                 $statusProgress = 'overdue';
-            } elseif ($value->tl_status == 'Open' && $value->tl_planend > Carbon::today() && $value->tl_progress < 100) {
-                $statusProgress = 'working';
-            } else {
+            } elseif ($value->tl_status == 'Open' && $value->tl_exestart == null) {
+                $statusProgress = 'waiting';
+            } elseif($value->tl_status == 'Open' && $value->tl_exestart != null) {
                 $statusProgress = 'working';
             }
 
@@ -643,6 +645,17 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            if($request->progress == 100 || $request->progress == '100'){
+                DB::table('d_todolist')->where('tl_id',$request->todolist)->update([
+                    'tl_status' => 'Finish',
+                    'tl_exeend' => Carbon::now('Asia/Jakarta'),
+                    'tl_progress' => $request->progress,
+                ]);
+            }else{
+                  DB::table('d_todolist')->where('tl_id', $request->todolist)->update([
+                'tl_progress' => $request->progress,
+            ]);
+            }
             DB::table('d_todolist_timeline')->insert([
                 'tlt_todolist' => $request->todolist,
                 'tlt_user' => Auth::user()->us_id,
@@ -650,9 +663,7 @@ class ToDoController extends Controller
                 'tlt_note' => $request->catatan,
                 'tlt_created'=> Carbon::now('Asia/Jakarta'),
             ]);
-            DB::table('d_todolist')->where('tl_id', $request->todolist)->update([
-                'tl_progress' => $request->progress,
-            ]);
+          
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -821,10 +832,13 @@ class ToDoController extends Controller
         $documentTodo = DB::table('d_todolist_attachment')
                         ->where('tla_todolist', $id)
                         ->get();
+        $statusKita = DB::table('d_todolist_roles')->where('tlr_users',Auth::user()->us_id)->orderBy('tlr_role','ASC')->first();
+
         return response()->json([
             'todo' => $todo,
             'member_todo' => $MemberTodo,
             'document_todo' => $documentTodo,
+            'statuskita' => $statusKita,
         ]);
     }
 
@@ -1362,5 +1376,29 @@ class ToDoController extends Controller
                         ->orderBy('tlt_id', 'Desc')
                         ->get();
         return response()->json($TodoActivity);
+    }
+
+    public function delete_todo(Request $request){
+        DB::BeginTransaction();
+        try {
+            
+            DB::table('d_todolist')->where('tl_id',$request->todolist)->delete();
+            DB::table('d_todolist_action')->where('tla_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_attachment')->where('tla_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_important')->where('tli_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_normal')->where('tln_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_ready')->where('tlr_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_roles')->where('tlr_todolist',$request->todolist)->delete();
+            DB::table('d_todolist_timeline')->where('tlt_todolist',$request->todolist)->delete();
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
     }
 }

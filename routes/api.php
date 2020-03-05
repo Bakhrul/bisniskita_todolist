@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 */
 Route::post('/user/register', 'UserController@register');
 
+Route::post('/reset_password','ResetPasswordController@reminder_password');
+
 Route::group(['middleware' => 'auth:api'], function(){
 
     Route::get('/listkategori','KategoriController@getDataKategori');
@@ -55,6 +57,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::delete('/todo/attachment/{id}', 'ToDoController@destroyFile');
     Route::post('/detail_member_todo','ToDoController@detail_member_todo');
     Route::post('/realisasi_todo','ToDoController@realisasi_todo');
+    Route::post('/delete_todo','ToDoController@delete_todo');
 
     //=============================|Project|=========================================
     Route::get('/history', 'ToDoController@getHistory');
@@ -80,6 +83,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/detail_project_all','ProjectController@detail_project_all');
     Route::post('/searc_todo_project','ToDoController@search_todo_project');
     Route::post('/detail_member_project','ProjectController@detail_member_project');
+    Route::post('/delete_project','ProjectController@delete_project');
 
     Route::post('/update_data_project','ProjectController@update_data_project');
     Route::post('/project/started-project','ProjectController@started_project');
