@@ -154,8 +154,10 @@ class ToDoController extends Controller
         foreach ($data as $key => $value) {
             $arr = [
                 'id' => $value->us_id,
+                'image' => $value->us_image,
                 'name' => $value->us_name,
                 'email' => $value->us_email,
+                'idaccess' => $value->r_id,
                 'access' => $value->r_name,
                 'todo' => $value->tlr_todolist,
             ];
@@ -643,6 +645,17 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            if($request->progress == 100 || $request->progress == '100'){
+                DB::table('d_todolist')->where('tl_id',$request->todolist)->update([
+                    'tl_status' => 'Finish',
+                    'tl_exeend' => Carbon::now('Asia/Jakarta'),
+                    'tl_progress' => $request->progress,
+                ]);
+            }else{
+                  DB::table('d_todolist')->where('tl_id', $request->todolist)->update([
+                'tl_progress' => $request->progress,
+            ]);
+            }
             DB::table('d_todolist_timeline')->insert([
                 'tlt_todolist' => $request->todolist,
                 'tlt_user' => Auth::user()->us_id,
@@ -650,9 +663,7 @@ class ToDoController extends Controller
                 'tlt_note' => $request->catatan,
                 'tlt_created'=> Carbon::now('Asia/Jakarta'),
             ]);
-            DB::table('d_todolist')->where('tl_id', $request->todolist)->update([
-                'tl_progress' => $request->progress,
-            ]);
+          
             DB::commit();
             return response()->json([
                 'status' => 'success',
