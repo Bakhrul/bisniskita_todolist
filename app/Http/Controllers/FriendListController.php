@@ -9,7 +9,9 @@ use Carbon\Carbon;
 class FriendListController extends Controller
 {
 	public function get_friendlist(Request $request){
-		$friendList = DB::table('d_friendlist')->join('m_users','fl_friend','us_id')->where('fl_users',Auth::user()->us_id)->get();
+		$friendList = DB::table('d_friendlist')
+					 ->join('m_users','fl_friend','us_id')
+					->where('fl_users',Auth::user()->us_id)->get();
 
 		return response()->json($friendList);
 	}
