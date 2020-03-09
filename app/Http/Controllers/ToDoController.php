@@ -1101,7 +1101,7 @@ class ToDoController extends Controller
                                 ->where('tlr_role', '!=', 1)
                                 ->delete();
             
-                $projetLeader = DB::table('d_todolist_roles')->where('tlr_own', 'P')->where('tlr_role', 1)->get();
+                $projetLeader = DB::table('d_todolist_roles')->where('tlr_own', 'P')->where('tlr_todolist',$id)->where('tlr_role', 1)->get();
                 foreach ($projetLeader as $key => $value) {
                     DB::table('d_todolist_roles')->where('tlr_users', $value->tlr_users)->where('tlr_todolist', $id)->delete();
                     DB::table('d_todolist_roles')->insert([
