@@ -13,6 +13,7 @@ class FriendListController extends Controller
 
 		return response()->json($friendList);
 	}
+	
     public function tambah_teman(Request $request){
     	DB::BeginTransaction();
     	try {
