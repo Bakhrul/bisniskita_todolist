@@ -87,4 +87,12 @@ Route::group(['middleware' => 'auth:api'], function(){
 
     Route::post('/update_data_project','ProjectController@update_data_project');
     Route::post('/project/started-project','ProjectController@started_project');
+
+    Route::get('/userdetail/{id}','UserController@detail_user');
+
+    Route::get('/get_friendlist','FriendListController@get_friendlist');
+    Route::post('/tambah_teman','FriendListController@tambah_teman');
+    Route::post('/konfirmasiTeman','FriendListController@konfirmasiTeman');
+    Route::post('/hapus_teman','FriendListController@hapus_teman');
+    Route::get('/get_confirmation_friend','FriendListController@get_confirmation_friend');
 });

@@ -164,4 +164,10 @@ class UserController extends Controller
             return $th;
         }
     }
+
+    public function detail_user($id){
+        $User = DB::table('m_users')->where('us_id',$id)->first();
+
+        return response()->json($User);
+    }
 }
