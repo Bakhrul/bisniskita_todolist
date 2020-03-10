@@ -24,10 +24,14 @@ class FriendListController extends Controller
         $friendList = DB::table('d_friendlist')
                      ->join('m_users', 'fl_friend', 'us_id')
                     ->where('fl_users', Auth::user()->us_id)
-                    ->where('us_name', 'LIKE', "%$nama%")
-                    ->select('us_name AS name', 'fl_users AS user', 'fl_friend AS friend', 'us_image AS image','us_email AS email')
-                    ->get();
-                                
+                    ->where('fl_approved','!=', NULL )
+                    ->select('us_name AS name', 'fl_users AS user', 'fl_friend AS friend', 'us_image AS image','us_email AS email');
+                    
+          if ($nama == 'all') {
+              $friendList = $friendList->get();
+          }else {
+              $friendList = $friendList->where('us_name', 'LIKE', "%$nama%")->get();
+          }                      
         
         if (count($friendList) > 0) {
             return response()->json($friendList);
