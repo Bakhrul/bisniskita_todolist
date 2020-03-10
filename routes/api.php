@@ -91,6 +91,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/userdetail/{id}','UserController@detail_user');
 
     Route::get('/get_friendlist','FriendListController@get_friendlist');
+    Route::get('/get_friendlist/filter/{name}','FriendListController@get_friendlist_filter');
     Route::post('/tambah_teman','FriendListController@tambah_teman');
     Route::post('/konfirmasiTeman','FriendListController@konfirmasiTeman');
     Route::post('/hapus_teman','FriendListController@hapus_teman');
