@@ -223,21 +223,19 @@ class ToDoController extends Controller
             ->where('tlr_users', Auth::user()->us_id)
             ->where(function ($q) {
             $q->where('tl_status', '=', 'Pending');
-            // $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
-        })->exists();
+        })->first();
 
         $dataMolor = Todo::orderBy('tl_planstart', 'ASC')
             ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
             ->where('tlr_users', Auth::user()->us_id)
             ->where(function ($q) {
-            // $q->where('tl_status', '=', 'Pending');
             $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
-        })->exists();
+        })->first();
 
-         if($dataPending == true){
+         if($dataPending != null){
                 $statusPending = 1;
         }
-        if($dataMolor == true){
+        if($dataMolor != null){
             $statusMolor = 1;
         }
 
@@ -303,12 +301,15 @@ class ToDoController extends Controller
                 'category' => $value->tl_category,
                 'statuspinned' => $value->tli_todolist,
                 'statusprogress'    => $statusProgress,
-                'statusmolor'    => $statusMolor,
-                'statuspending'    => $statusPending,
+              
             ];
             array_push($todos, $arr);
         }
-        return response()->json($todos);
+        return response()->json([
+            'todo' => $todos,
+            'statusmolor'    => $statusMolor,
+            'statuspending'    => $statusPending,
+        ]);
     }
 
     public function actionpinned_todo(Request $request)
@@ -442,7 +443,7 @@ class ToDoController extends Controller
             ->where(function ($q) {
                 $q->where('tl_status', '=', 'Pending');
                 // $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
-            })->exists();
+            })->first();
 
         $dataMolor = Todo::orderBy('tl_planstart', 'ASC')
             ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
@@ -450,12 +451,12 @@ class ToDoController extends Controller
             ->where(function ($q) {
                 // $q->where('tl_status', '=', 'Pending');
                 $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
-            })->exists();
+            })->first();
 
-         if ($dataPending == true) {
+         if ($dataPending != null) {
              $statusPending = 1;
          }
-        if ($dataMolor == true) {
+        if ($dataMolor != null) {
             $statusMolor = 1;
         }
 
@@ -532,9 +533,7 @@ class ToDoController extends Controller
                 'allday' => (int)$value->tl_allday,
                 'category' => $value->tl_category,
                 'statuspinned' => $value->tli_todolist,
-                'statusprogress'    => $statusProgress,
-                'statusmolor'    => $statusMolor,
-                'statuspending'    => $statusPending,
+                'statusprogress'    => $statusProgress,            
             ];
             array_push($todos, $arr);
         }
@@ -544,6 +543,8 @@ class ToDoController extends Controller
             'counttodo' => count($data),
             'project' => $Project,
             'countproject' => count($Project),
+             'statusmolor'    => $statusMolor,
+                'statuspending'    => $statusPending,
         ]);
     }
     /**

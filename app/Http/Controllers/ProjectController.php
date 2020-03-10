@@ -177,29 +177,41 @@ class ProjectController extends Controller
     public function add_member_project(Request $request){
         DB::beginTransaction();
         try {
-        
-        $cekUser = DB::table('m_users')->where('us_email',$request->member)->first();
 
-        if($cekUser == null){
-            return response()->json([
-                'status' => 'user tidak ada',
-            ]);
+        if($request->type == 'teman'){
+
+            $memberId = $request->member;
+
         }else{
-            $cekMember = DB::table('d_project_member')->where('mp_user',$cekUser->us_id)->where('mp_project',$request->project)->first();
+            $cekUser = DB::table('m_users')->where('us_email',$request->member)->first();
+            if($cekUser == null){
+                return response()->json([
+                    'status' => 'user tidak ada',
+                ]);
+            }
+
+            $memberId =  $cekUser->us_id;
+        }
+        
+            $cekMember = DB::table('d_project_member')->where('mp_user',$memberId)->where('mp_project',$request->project)->first();
             $cekTodo = DB::table('d_todolist')->where('tl_project',$request->project)->get();
             if($cekMember == null){
                 DB::table('d_project_member')->insert([
                     'mp_project' => $request->project,
-                    'mp_user' => $cekUser->us_id,
+                    'mp_user' => $memberId,
                     'mp_role' => $request->status,
                     'mp_created' => Carbon::now(),
                     'mp_updated' => Carbon::now(),
                 ]);
 
                 foreach ($cekTodo as $key => $value) {
-                    DB::table('d_todolist_roles')->where('tlr_users',$cekUser->us_id)->where('tlr_todolist',$value->tl_id)->delete();
+                    DB::table('d_todolist_roles')
+                    ->where('tlr_users',$memberId)
+                    ->where('tlr_todolist',$value->tl_id)
+                    ->where('tlr_own','T')->delete();
+
                     DB::table('d_todolist_roles')->insert([
-                        'tlr_users' => $cekUser->us_id,
+                        'tlr_users' => $memberId,
                         'tlr_todolist' => $value->tl_id,
                         'tlr_role' => $request->status,
                         'tlr_own' => 'P',
@@ -212,7 +224,6 @@ class ProjectController extends Controller
                     'role' => $cekRole->r_name,
                 ]);
             }
-        }
 
         DB::commit();
         return response()->json([

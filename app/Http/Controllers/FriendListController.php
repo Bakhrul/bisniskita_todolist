@@ -116,4 +116,18 @@ class FriendListController extends Controller
     						 ->get();
     	return response()->json($confirmationFriend);
     }
+    public function get_friend_acc(Request $request){
+    	$friend = DB::table('d_friendlist')
+    			->join('m_users','fl_friend','us_id')
+    			->where('fl_users',Auth::user()->us_id)
+    			->where('fl_approved','!=', null);
+
+    	if($request->search != null){
+    		$friend = $friend->where('us_name', 'LIKE', $request->search .'%')->get();
+    	}else{
+    		$friend = $friend->get();
+    	}
+
+    	return response()->json($friend);
+    }
 }
