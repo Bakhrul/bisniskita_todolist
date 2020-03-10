@@ -308,7 +308,11 @@ class ToDoController extends Controller
             ];
             array_push($todos, $arr);
         }
-        return response()->json($todos);
+        return response()->json(
+            ['todo' => $todos,
+            'statusmolor'=> $statusMolor,
+            'statuspending'=> $statusPending
+            ]);
     }
 
     public function actionpinned_todo(Request $request)
@@ -544,6 +548,8 @@ class ToDoController extends Controller
             'counttodo' => count($data),
             'project' => $Project,
             'countproject' => count($Project),
+            'statusmolor' => $statusMolor,
+            'statuspending' => $statusPending,
         ]);
     }
     /**
