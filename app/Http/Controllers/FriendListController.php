@@ -11,7 +11,9 @@ class FriendListController extends Controller
 	public function get_friendlist(Request $request){
 		$friendList = DB::table('d_friendlist')
 					 ->join('m_users','fl_friend','us_id')
-					->where('fl_users',Auth::user()->us_id)->get();
+					 ->where('fl_users',Auth::user()->us_id)
+                     ->where('fl_denied',null)
+                    ->get();
 
 		return response()->json($friendList);
 	}

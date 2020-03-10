@@ -307,6 +307,14 @@ class ProjectController extends Controller
      DB::beginTransaction();
         try {
         DB::table('d_todolist')->where('tl_project',$request->project)->where('tl_id',$request->todolist)->delete();
+        DB::table('d_todolist_action')->where('tla_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_attachment')->where('tla_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_important')->where('tli_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_normal')->where('tln_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_ready')->where('tlr_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_roles')->where('tlr_todolist',$request->todolist)->delete();
+        DB::table('d_todolist_timeline')->where('tlt_todolist',$request->todolist)->delete();
 
         $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
 
@@ -333,7 +341,7 @@ class ProjectController extends Controller
         $getTodoProject = DB::table('d_todolist')->where('tl_project',$request->project)->get();
 
         foreach ($getTodoProject as $key => $value) {
-            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->update([
+            DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->where('tlr_own','P')->update([
                 'tlr_role' => $request->role,
             ]);
         }
