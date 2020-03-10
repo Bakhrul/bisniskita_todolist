@@ -209,7 +209,7 @@ class ToDoController extends Controller
         $statusPending = 0;
         $statusMolor = 0;
         $todos = array();
-        $data = Todo::orderBy('tl_planstart', 'ASC')
+        $data = Todo::orderBy('tl_planend', 'ASC')
                 ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
                 ->leftJoin('d_todolist_important', function ($join) {
                     $join->on('d_todolist.tl_id', '=', 'd_todolist_important.tli_todolist')
