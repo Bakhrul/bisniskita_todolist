@@ -66,16 +66,17 @@ class ProjectController extends Controller
                 'status' => $statusProgress
             ];
 
-            $arrProj['percent'] = $percent;        
-            foreach ($value['role'] as $key2 => $valueRole) {
-                $arrUser = [
-                    'id' => $valueRole['user']->us_id,
-                    'name' => $valueRole['user']->us_name,
-                    'path' => $valueRole['user']->us_image,
-                ];
+            $arrProj['percent'] = $percent;             
 
-                array_push($arrProj['members'],$arrUser);
+            $Member = DB::table('d_project_member')->join('m_users','mp_user','us_id')->where('mp_project',$value->p_id)->limit(5)->get();
+            foreach ($Member as $key => $valueMember) {
+                $memberArr = [
+                    'path' => $valueMember->us_image
+                ];
+            array_push($arrProj['members'],$memberArr);
+            
             }
+
             $MemberTotal = DB::table('d_project_member')->where('mp_project',$value->p_id)->count();
             $arrProj['member_total'] =  $MemberTotal;
             array_push($datas['project'], $arrProj);

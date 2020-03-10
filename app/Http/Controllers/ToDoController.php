@@ -889,6 +889,7 @@ class ToDoController extends Controller
                     ->join('m_users', 'tlr_users', 'us_id')
                     ->join('m_roles', 'tlr_role', 'r_id')
                     ->where('tlr_todolist', $id)
+                    ->where('tlr_own','T')
                     ->orderBy('tlr_role', 'ASC')
                     ->groupBy('tlr_users')
                     ->get();

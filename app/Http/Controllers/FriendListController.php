@@ -27,7 +27,7 @@ class FriendListController extends Controller
                     ->where('fl_approved','!=', NULL )
                     ->select('us_name AS name', 'fl_users AS user', 'fl_friend AS friend', 'us_image AS image','us_email AS email');
                     
-          if ($nama == 'all') {
+          if ($nama == 'unknown') {
               $friendList = $friendList->get();
           }else {
               $friendList = $friendList->where('us_name', 'LIKE', "%$nama%")->get();
