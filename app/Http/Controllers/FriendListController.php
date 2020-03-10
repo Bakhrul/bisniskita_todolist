@@ -14,7 +14,7 @@ class FriendListController extends Controller
 					 ->join('m_users','fl_friend','us_id')
 					 ->where('fl_users',Auth::user()->us_id)
                      ->where('fl_denied',null)
-                    ->get();
+                     ->get();
 
         return response()->json($friendList);
     }
@@ -126,14 +126,19 @@ class FriendListController extends Controller
             return $e;
         }
     }
-    public function get_confirmation_friend()
+    public function get_confirmation_friend(Request $request)
     {
         $confirmationFriend = DB::table('d_friendlist')
                              ->join('m_users', 'fl_users', 'us_id')
                              ->where('fl_friend', Auth::user()->us_id)
                              ->where('fl_approved', null)
-                             ->where('fl_denied', null)
-                             ->get();
+                             ->where('fl_denied', null);
+        if($request->search != null){
+            $confirmationFriend = $confirmationFriend->where('us_name', 'LIKE', $request->search .'%')->get();
+        }else{
+            $confirmationFriend = $confirmationFriend->get();
+        }
+
         return response()->json($confirmationFriend);
     }
     public function get_friend_acc(Request $request){

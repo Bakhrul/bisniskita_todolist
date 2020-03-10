@@ -95,6 +95,6 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/tambah_teman','FriendListController@tambah_teman');
     Route::post('/konfirmasiTeman','FriendListController@konfirmasiTeman');
     Route::post('/hapus_teman','FriendListController@hapus_teman');
-    Route::get('/get_confirmation_friend','FriendListController@get_confirmation_friend');
+    Route::post('/get_confirmation_friend','FriendListController@get_confirmation_friend');
     Route::post('/get_friend_acc','FriendListController@get_friend_acc');
 });
