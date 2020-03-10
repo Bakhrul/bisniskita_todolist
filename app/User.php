@@ -32,7 +32,7 @@ class User extends Authenticatable
     ];
      public function findForPassport($username)
     {
-        return $this->where('us_email', $username)->first();
+        return $this->where('us_email', $username)->where('us_isactive','=',1)->first();
     }
     public function validateForPassportPasswordGrant($password){
         return Hash::check($password, $this->us_password);

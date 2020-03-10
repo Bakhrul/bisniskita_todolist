@@ -110,13 +110,13 @@ class UserController extends Controller
         try {
        	$emailAvailable = DB::table('m_users')->where('us_email',$request->email)->first();
         if($emailAvailable != null){
-            if($emailAvailable->us_isactive >= "T"){
+            if($emailAvailable->us_isactive == 0){
         	   return response()->json([
         		  'status' => 'emailnotavailable',
         	   ]);
-            }elseif ($emailAvailable->us_isactive >= "F") {
+            }elseif ($emailAvailable->us_isactive == 1) {
                  DB::table('m_user')->where('us_email',$request->email)->update([
-                'us_isactive'       => "T",
+                'us_isactive'       => 1,
                 'us_update_time'    => Carbon::now(),
                 'password' => bcrypt($request->password),
             ]); 
@@ -128,7 +128,7 @@ class UserController extends Controller
             'us_email'          => $request->email,
             'us_name'           => $request->namalengkap,
             'us_password'       => bcrypt($request->password),
-            // 'us_isactive'       => "T",
+            'us_isactive'       => 1,
             'us_created'    => Carbon::now(),
             'us_updated'    => Carbon::now(),
         ]);  
