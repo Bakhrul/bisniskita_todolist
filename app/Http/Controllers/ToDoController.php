@@ -1153,7 +1153,7 @@ class ToDoController extends Controller
                 ]);
             }
 
-            $cekMember = DB::table('d_todolist_roles')->where('tlr_users', $cekUser->us_id)->where('tlr_todolist', $request->todolist)->first();
+            $cekMember = DB::table('d_todolist_roles')->where('tlr_users', $cekUser->us_id)->where('tlr_todolist', $request->todolist)->where('tlr_own','T')->first();
             if ($cekMember != null) {
                 return response()->json([
                     'status' => 'member sudah terdaftar',
