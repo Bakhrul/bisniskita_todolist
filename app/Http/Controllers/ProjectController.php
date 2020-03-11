@@ -449,13 +449,24 @@ class ProjectController extends Controller
     }
     public function update_data_project(Request $request){
         DB::beginTransaction();
+        $dataStatus = DB::table('d_project')->where('p_id',$request->project)->value('p_status');
+        $status = 'Open';
+        if($dataStatus != 'Open'){
+            if(Carbon::parse($request->tanggal_akhir) < Carbon::today()){
+             $status = 'Finish';
+
+            }else{
+            $status = 'Pending';
+
+            }
+        }
         try {
-                
             DB::table('d_project')->where('p_id',$request->project)->update([
                 'p_name' => $request->nama_project,
                 'p_timestart' => Carbon::parse($request->tanggal_awal),
                 'p_timeend' => Carbon::parse($request->tanggal_akhir),
                 'p_desc' => $request->deskripsi_project,
+                'p_status' => $status,
             ]);
             DB::commit();
             return response()->json([
