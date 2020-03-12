@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+Route::get('/checkversion/{id}', 'VersionController@checkversion');
 Route::post('/user/register', 'UserController@register');
 
 Route::post('/reset_password','ResetPasswordController@reminder_password');
