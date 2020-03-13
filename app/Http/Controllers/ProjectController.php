@@ -218,6 +218,16 @@ class ProjectController extends Controller
                         'tlr_own' => 'P',
                     ]);
                 }
+                   DB::table('d_notifications_todolist')->insert([
+                    'nt_notifications' => '5',
+                    'nt_todolist' => null,
+                    'nt_project' => $request->project,
+                    'nt_fromuser' => Auth::user()->us_id,
+                    'nt_touser' => $memberId,
+                    'nt_status' => 'N',
+                    'nt_created' => Carbon::now('Asia/Jakarta'),
+                   ]);
+
             }else{
                 $cekRole = DB::table('m_roles')->where('r_id',$cekMember->mp_role)->first();
                 return response()->json([
@@ -293,6 +303,15 @@ class ProjectController extends Controller
         foreach ($getTodo as $key => $value) {
             DB::table('d_todolist_roles')->where('tlr_users',$request->member)->where('tlr_todolist',$value->tl_id)->where('tlr_own','P')->delete();
         }
+        DB::table('d_notifications_todolist')->insert([
+            'nt_notifications' => '6',
+            'nt_todolist' => null,
+            'nt_project' => $request->project,
+            'nt_fromuser' => Auth::user()->us_id,
+            'nt_touser' => $request->member,
+            'nt_status' => 'N',
+            'nt_created' => Carbon::now('Asia/Jakarta'),
+        ]);
 
         DB::commit();
         return response()->json([

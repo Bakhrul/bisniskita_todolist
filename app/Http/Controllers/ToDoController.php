@@ -140,6 +140,7 @@ class ToDoController extends Controller
         $data = User::leftJoin('d_todolist_roles', 'tlr_users', 'us_id')
         ->leftJoin('m_roles', 'tlr_role', 'r_id')
         ->where('tlr_todolist', $todo)
+        ->where('tlr_own','T')
         ->orderBy('tlr_role', 'ASC')
         ->groupBy('tlr_users');
         // dd($data->get());
@@ -576,14 +577,24 @@ class ToDoController extends Controller
                 $project = $request->project;
             }
 
+            if($request->allday == '1' || $request->allday == 1){
+
+                $dateStart = Carbon::parse($request->planstart)->setTime(00,00,00);
+                $dateEnd = Carbon::parse($request->planend)->setTime(23,59,59);
+            }else{
+                $dateStart = Carbon::parse($request->planstart)->format('Y-m-d H:i:s');
+                $dateEnd = Carbon::parse($request->planend)->format('Y-m-d H:i:s');
+
+            }
+
             $todo->tl_title         = $request->title;
             $todo->tl_category      = $request->category;
             $todo->tl_project       = $project;
             $todo->tl_desc          = $request->desc;
             $todo->tl_status        = 'Open';
             $todo->tl_progress      = 0;
-            $todo->tl_planstart     = Carbon::parse($request->planstart)->format('Y-m-d H:i:s');
-            $todo->tl_planend       = Carbon::parse($request->planend)->format('Y-m-d H:i:s');
+            $todo->tl_planstart     = $dateStart;
+            $todo->tl_planend       = $dateEnd;
             $todo->tl_exestart      = null;
             $todo->tl_exeend        = null;
             $todo->tl_created       = Carbon::now();
@@ -606,6 +617,19 @@ class ToDoController extends Controller
                         'tlr_role' => $value->mp_role,
                         'tlr_own' => 'P',
                     ]);
+
+                    if($value->mp_user != Auth::user()->us_id){
+                        DB::table('d_notifications_todolist')->insert([
+                        'nt_notifications' => '3',
+                        'nt_todolist' => $todo->tl_id,
+                        'nt_fromuser' => Auth::user()->us_id,
+                        'nt_project' => $request->project,
+                        'nt_touser' => $value->mp_user, 
+                        'nt_fromuser' => Auth::user()->us_id,
+                        'nt_status' => 'N',
+                        'nt_created' => Carbon::now('Asia/Jakarta'),
+                    ]);
+                    }
                 }
             }
             DB::commit();
@@ -1080,21 +1104,6 @@ class ToDoController extends Controller
                 $planend = Carbon::parse($request->planend)->setTime(23, 59, 59);
             }
 
-            $todo->tl_title         = $request->title;
-            $todo->tl_category      = $request->category;
-            $todo->tl_project       = $project;
-            $todo->tl_desc          = $request->desc;
-            $todo->tl_status        = 'Open';
-            $todo->tl_progress      = 0;
-            $todo->tl_planstart     = $planstart;
-            $todo->tl_planend       = $planend;
-            $todo->tl_allday        = $request->allday;
-            $todo->tl_exestart      = null;
-            $todo->tl_exeend        = null;
-            $todo->tl_created       = Carbon::now();
-            $todo->tl_updated       = Carbon::now();
-            $todo->update();
-
             $cekDataSebelumnya = DB::table('d_todolist')->where('tl_id', $id)->first();
             if ($request->category != '1') {
                 $ProjectTodoMember = DB::table('d_todolist_roles')
@@ -1102,8 +1111,23 @@ class ToDoController extends Controller
                                 ->where('tlr_own', 'P')
                                 ->where('tlr_role', '!=', 1)
                                 ->delete();
-            
-                $projetLeader = DB::table('d_todolist_roles')->where('tlr_own', 'P')->where('tlr_todolist',$id)->where('tlr_role', 1)->get();
+                if($cekDataSebelumnya->tl_project != null){
+                    $memberProject = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                    foreach ($memberProject as $key => $person) {
+                         DB::table('d_notifications_todolist')->insert([
+                            'nt_notifications' => '4',
+                            'nt_todolist' => $id,
+                            'nt_fromuser' => Auth::user()->us_id,
+                            'nt_touser' => $person->mp_user,
+                            'nt_project' => $cekDataSebelumnya->tl_project,
+                            'nt_status' => 'N',
+                            'nt_created' => Carbon::now('Asia/Jakarta'),
+                        ]);
+
+                    }
+                }
+                $projetLeader = DB::table('d_todolist_roles')
+                                ->where('tlr_own', 'P')->where('tlr_todolist',$id)->where('tlr_role', 1)->get();
                 foreach ($projetLeader as $key => $value) {
                     DB::table('d_todolist_roles')->where('tlr_users', $value->tlr_users)->where('tlr_todolist', $id)->delete();
                     DB::table('d_todolist_roles')->insert([
@@ -1119,19 +1143,78 @@ class ToDoController extends Controller
                 $projectMember = DB::table('d_project_member')->where('mp_project', $request->project)->get();
                 foreach ($projectMember as $key => $value) {
                     DB::table('d_todolist_roles')
-                ->where('tlr_users', $value->mp_user)
-                ->where('tlr_todolist', $id)
-                ->where('tlr_own', 'P')
-                ->delete();
-
+                    ->where('tlr_users', $value->mp_user)
+                    ->where('tlr_todolist', $id)
+                    ->where('tlr_own', 'P')
+                    ->delete();
                     DB::table('d_todolist_roles')->insert([
-                    'tlr_users' => $value->mp_user,
-                    'tlr_todolist' => $id,
-                    'tlr_own' => 'P',
-                    'tlr_role' => $value->mp_role,
-                ]);
+                        'tlr_users' => $value->mp_user,
+                        'tlr_todolist' => $id,
+                        'tlr_own' => 'P',
+                        'tlr_role' => $value->mp_role,
+                    ]);
                 }
+                if($cekDataSebelumnya->tl_project == null){
+                    $memberProject = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                    foreach ($memberProject as $key => $member) {
+                        DB::table('d_notifications_todolist')->insert([
+                            'nt_notifications' => '3',
+                            'nt_todolist' => $id,
+                            'nt_fromuser' => Auth::user()->us_id,
+                            'nt_touser' => $member->mp_user,
+                            'nt_project' => $request->project,
+                            'nt_status' => 'N',
+                            'nt_created' => Carbon::now('Asia/Jakarta'),
+                        ]);
+                    }
+                }else{
+                    if($cekDataSebelumnya->tl_project != $request->project){
+                         $projectMemberOld = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                         foreach ($projectMemberOld as $key => $oldmember) {
+                            DB::table('d_notifications_todolist')->insert([
+                                'nt_notifications' => '4',
+                                'nt_todolist' => $id,
+                                'nt_fromuser' => Auth::user()->us_id,
+                                'nt_touser' => $oldmember->mp_user,
+                                'nt_project' => $cekDataSebelumnya->tl_project,
+                                'nt_status' => 'N',
+                                'nt_created' => Carbon::now('Asia/Jakarta'),
+                            ]);
+                        }
+
+                        $projectMemberNew = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                        foreach ($projectMemberNew as $key => $newmember) {
+                            DB::table('d_notifications_todolist')->insert([
+                                'nt_notifications' => '3',
+                                'nt_todolist' => $id,
+                                'nt_fromuser' => Auth::user()->us_id,
+                                'nt_touser' => $newmember->mp_user,
+                                'nt_project' => $request->project,
+                                'nt_status' => 'N',
+                                'nt_created' => Carbon::now('Asia/Jakarta'),
+                            ]);
+                        }
+
+
+                    }    
+                }
+                
             }
+
+            $todo->tl_title         = $request->title;
+            $todo->tl_category      = $request->category;
+            $todo->tl_project       = $project;
+            $todo->tl_desc          = $request->desc;
+            $todo->tl_status        = 'Open';
+            $todo->tl_progress      = 0;
+            $todo->tl_planstart     = $planstart;
+            $todo->tl_planend       = $planend;
+            $todo->tl_allday        = $request->allday;
+            $todo->tl_exestart      = null;
+            $todo->tl_exeend        = null;
+            $todo->tl_created       = Carbon::now();
+            $todo->tl_updated       = Carbon::now();
+            $todo->update();
 
             DB::commit();
             return response()->json([
@@ -1166,6 +1249,16 @@ class ToDoController extends Controller
                 'tlr_role' => $request->role,
                 'tlr_own' => 'T',
             ]);
+            DB::table('d_notifications_todolist')->insert([
+                'nt_notifications' => '1',
+                'nt_todolist' => $request->todolist,
+                'nt_fromuser' => Auth::user()->us_id,
+                'nt_touser' => $cekUser->us_id,
+                'nt_project' => null,
+                'nt_status' => 'N',
+                'nt_created' => Carbon::now('Asia/Jakarta'),
+            ]);
+
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -1181,6 +1274,15 @@ class ToDoController extends Controller
         try {
             DB::table('d_todolist_roles')->where('tlr_users', $request->member)->where('tlr_todolist', $request->todolist)->where('tlr_own', 'T')->delete();
             DB::table('d_todolist_important')->where('tli_users', $request->member)->where('tli_todolist', $request->todolist)->delete();
+            DB::table('d_notifications_todolist')->insert([
+                'nt_notifications' => '2',
+                'nt_todolist' => $request->todolist,
+                'nt_fromuser' => Auth::user()->us_id,
+                'nt_touser' => Auth::user()->us_id,
+                'nt_project' => null,
+                'nt_status' => 'N',
+                'nt_created' => Carbon::now('Asia/Jakarta'),
+            ]);
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -1230,6 +1332,15 @@ class ToDoController extends Controller
             ->where('tlr_todolist', $todo)
             ->where('tlr_users', $user)
                 ->delete();
+
+            DB::table('d_notifications_todolist')->insert([
+                'nt_notifications' => '2',
+                'nt_fromuser' => Auth::user()->us_id,
+                'nt_todolist' => $todo,
+                'nt_touser' => $user,
+                'nt_status' => 'N',
+                'nt_created' => Carbon::now('Asia/Jakarta'),
+            ]);
             DB::Commit();
             return response()->json(
                 [
@@ -1393,11 +1504,35 @@ class ToDoController extends Controller
                      DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                         'tl_exestart' => Carbon::now('Asia/Jakarta'),
                     ]);
+                     $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
+                     foreach ($todoMember as $key => $value) {
+                         DB::table('d_notifications_todolist')->insert([
+                            'nt_notifications' => '7',
+                            'nt_todolist' => $request->todo,
+                            'nt_project' => null,
+                            'nt_fromuser' => Auth::user()->us_id,
+                            'nt_touser' => $value->tlr_users,
+                            'nt_status' => 'N',
+                            'nt_created' => Carbon::now('Asia/Jakarta'),
+                         ]);
+                     }
                     break;
                 case 'pending':
                          DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                             'tl_status' => 'Pending',
                         ]);
+                         $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
+                     foreach ($todoMember as $key => $value) {
+                         DB::table('d_notifications_todolist')->insert([
+                            'nt_notifications' => '8',
+                            'nt_todolist' => $request->todo,
+                            'nt_project' => null,
+                            'nt_fromuser' => Auth::user()->us_id,
+                            'nt_touser' => $value->tlr_users,
+                            'nt_status' => 'N',
+                            'nt_created' => Carbon::now('Asia/Jakarta'),
+                         ]);
+                     }
                     break;
                 case 'selesai':
                          DB::table('d_todolist')->where('tl_id', $request->todo)->update([
@@ -1412,11 +1547,35 @@ class ToDoController extends Controller
                             'tlt_note' => 'To Do Sudah Selesai Dikerjakan',
                             'tlt_created' => Carbon::now('Asia/Jakarta'),
                          ]);
+                         $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
+                     foreach ($todoMember as $key => $value) {
+                         DB::table('d_notifications_todolist')->insert([
+                            'nt_notifications' => '9',
+                            'nt_todolist' => $request->todo,
+                            'nt_project' => null,
+                            'nt_fromuser' => Auth::user()->us_id,
+                            'nt_touser' => $value->tlr_users,
+                            'nt_status' => 'N',
+                            'nt_created' => Carbon::now('Asia/Jakarta'),
+                         ]);
+                     }
                     break;
                 case 'mulai mengerjakan kembali':
                          DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                              'tl_status' => 'Open',
                         ]);
+                          $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
+                     foreach ($todoMember as $key => $value) {
+                         DB::table('d_notifications_todolist')->insert([
+                            'nt_notifications' => '7',
+                            'nt_todolist' => $request->todo,
+                            'nt_project' => null,
+                            'nt_fromuser' => Auth::user()->us_id,
+                            'nt_touser' => $value->tlr_users,
+                            'nt_status' => 'N',
+                            'nt_created' => Carbon::now('Asia/Jakarta'),
+                         ]);
+                     }
                         break;
                 
                 default:
