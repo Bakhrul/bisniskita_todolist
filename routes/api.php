@@ -18,6 +18,8 @@ Route::post('/user/register', 'UserController@register');
 Route::post('/reset_password','ResetPasswordController@reminder_password');
 
 Route::group(['middleware' => 'auth:api'], function(){
+    Route::post('tesnotif','ToDoController@tesnotif');
+    Route::post('/updateTokenFcm','TokenController@updateToken');
     Route::get('/checkversion/{id}', 'VersionController@checkversion');
 
     Route::get('/listkategori','KategoriController@getDataKategori');
@@ -100,4 +102,5 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/get_confirmation_friend','FriendListController@get_confirmation_friend');
     Route::post('/get_friend_acc','FriendListController@get_friend_acc');
     Route::get('/getnotifications','NotificationsController@get_notif');
+    Route::post('/deletepesan_notifikasi','NotificationsController@delete_notif');
 });

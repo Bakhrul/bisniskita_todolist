@@ -22,6 +22,7 @@ class ProjectController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function dashboard(){
+        $countnotif = DB::table('d_notifications_todolist')->where('nt_touser',Auth::user()->us_id)->where('nt_status','N')->count();
         $data = Project::leftJoin('d_project_member','mp_project','p_id')
         ->where('mp_user',Auth::user()->us_id)
         ->with(['role' => function($q){
@@ -31,7 +32,8 @@ class ProjectController extends Controller
         $datas = array(
             'project' => [
                 
-            ]
+            ],
+            'notif' => $countnotif,
         );
         $dtx = array();
         // return response()->json()
@@ -218,6 +220,8 @@ class ProjectController extends Controller
                         'tlr_own' => 'P',
                     ]);
                 }
+                $masterNotif = DB::table('m_notifications')->where('n_id','5')->first();
+                $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
                    DB::table('d_notifications_todolist')->insert([
                     'nt_notifications' => '5',
                     'nt_todolist' => null,
@@ -227,6 +231,8 @@ class ProjectController extends Controller
                     'nt_status' => 'N',
                     'nt_created' => Carbon::now('Asia/Jakarta'),
                    ]);
+                   $send_notif = new TokenController();
+                    $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$memberId);
 
             }else{
                 $cekRole = DB::table('m_roles')->where('r_id',$cekMember->mp_role)->first();
@@ -273,15 +279,29 @@ class ProjectController extends Controller
             'tl_updated' => Carbon::now('Asia/Jakarta'),
         ]);
 
-        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
+        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+        $masterNotif = DB::table('m_notifications')->where('n_id','3')->first();
+        $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
         foreach ($getMember as $key => $value) {
-            DB::table('d_todolist_roles')->where('tlr_users',$value->mp_user)->where('tlr_todolist',$maxIdTodo)->delete();
+            DB::table('d_todolist_roles')->where('tlr_users',$value->mp_user)->where('tlr_todolist',$maxIdTodo)->where('tlr_own','P')->delete();
             DB::table('d_todolist_roles')->insert([
                 'tlr_users' => $value->mp_user,
                 'tlr_todolist' => $maxIdTodo,
                 'tlr_role' => $value->mp_role,
                 'tlr_own' => 'P',
             ]);
+            DB::table('d_notifications_todolist')->insert([
+                'nt_notifications' => '3',
+                'nt_todolist' => $maxIdTodo,
+                'nt_fromuser' => Auth::user()->us_id,
+                'nt_touser' => $value->mp_user,
+                'nt_project' => $request->project,
+                'nt_status' => 'N',
+                'nt_created' => Carbon::now('Asia/Jakarta'),
+            ]);
+
+            $send_notif = new TokenController();
+            $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',$request->nama_todo . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$value->mp_user);
         }
 
         DB::commit();
@@ -312,7 +332,11 @@ class ProjectController extends Controller
             'nt_status' => 'N',
             'nt_created' => Carbon::now('Asia/Jakarta'),
         ]);
-
+        $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
+        $getMember = DB::table('m_users')->where('us_id',$request->member)->first();
+        $masterNotif = DB::table('m_notifications')->where('n_id','6')->first();
+        $send_notif = new TokenController();
+            $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$request->member);
         DB::commit();
         return response()->json([
             'status' => 'success',

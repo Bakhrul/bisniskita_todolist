@@ -12,10 +12,17 @@ use App\todolistRole;
 use File;
 use App\Attachment;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\TokenController;
 use Response;
 
 class ToDoController extends Controller
 {
+
+    public function tesnotif(Request $request){
+              $send_notif = new TokenController();
+              $send_notif->sendNotif('Todolist','tesnotif','12');
+              return response()->json($request->user);
+    }
     /**
      * Display a listing of the resource.
      *
@@ -205,19 +212,27 @@ class ToDoController extends Controller
     public function index($index)
     {
         setlocale(LC_TIME, 'IND');
+        $sortBy = null;
 
         $type = $index;
         $statusPending = 0;
         $statusMolor = 0;
         $todos = array();
-        $data = Todo::orderBy('tl_planend', 'ASC')
-                ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
+        $data = Todo::join('d_todolist_roles', 'tlr_todolist', 'tl_id')
                 ->leftJoin('d_todolist_important', function ($join) {
                     $join->on('d_todolist.tl_id', '=', 'd_todolist_important.tli_todolist')
                         ->where('d_todolist_important.tli_users', Auth::user()->us_id);
                 })
                 ->where('tlr_users', Auth::user()->us_id)
-                ->groupBy('tl_id');
+                ->when($sortBy, function ($query, $sortBy) {
+                    return $query->orderBy($sortBy);
+                                 
+                }, function ($query) {
+                    return $query->orderBy('tli_todolist','desc');
+                })
+                ->orderBy('tl_planstart','ASC');
+
+                
 
         $dataPending = Todo::orderBy('tl_planstart', 'ASC')
             ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
@@ -349,7 +364,8 @@ class ToDoController extends Controller
                 })
                 ->join('d_todolist', 'tli_todolist', 'tl_id')
                 ->where('tl_title', 'LIKE', $request->search .'%')
-                  ->groupBy('tl_id');
+                ->groupBy('tl_id')
+                ->orderBy('tl_planstart','ASC');;
 
         if ($type == "1") {
             $data = $data->where(function ($q) {
@@ -426,6 +442,7 @@ class ToDoController extends Controller
         $type = $request->filter;
         $statusPending = 0;
         $statusMolor = 0;
+        $sortBy = null;
         $data = DB::table('d_todolist')
                 ->join('d_todolist_roles', function ($join) {
                     $join->on('d_todolist.tl_id', '=', 'd_todolist_roles.tlr_todolist')
@@ -436,7 +453,14 @@ class ToDoController extends Controller
                         ->where('d_todolist_important.tli_users', Auth::user()->us_id);
                 })
                 ->where('tl_title', 'LIKE', $request->search .'%')
-               ->groupBy('tl_id');
+               ->groupBy('tl_id')
+               ->when($sortBy, function ($query, $sortBy) {
+                    return $query->orderBy($sortBy);
+                                 
+                }, function ($query) {
+                    return $query->orderBy('tli_todolist','desc');
+                })
+                ->orderBy('tl_planstart','ASC');
                
         $dataPending = Todo::orderBy('tl_planstart', 'ASC')
             ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
@@ -609,6 +633,8 @@ class ToDoController extends Controller
                     'tlr_role'      => 1
                 ]);
             if ($request->category == '1') {
+                $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();                
+                $masterNotif = DB::table('m_notifications')->where('n_id','3')->first();
                 $memberProject = DB::table('d_project_member')->where('mp_project', $request->project)->get();
                 foreach ($memberProject as $key => $value) {
                     DB::table('d_todolist_roles')->insert([
@@ -628,7 +654,9 @@ class ToDoController extends Controller
                         'nt_fromuser' => Auth::user()->us_id,
                         'nt_status' => 'N',
                         'nt_created' => Carbon::now('Asia/Jakarta'),
-                    ]);
+                        ]);
+                        $send_notif = new TokenController();
+                        $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',$request->title . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,'12');
                     }
                 }
             }
@@ -1112,6 +1140,8 @@ class ToDoController extends Controller
                                 ->where('tlr_role', '!=', 1)
                                 ->delete();
                 if($cekDataSebelumnya->tl_project != null){
+                    $masterNotif = DB::table('m_notifications')->where('n_id','4')->first();
+                    $namaProject = DB::table('d_project')->where('p_id',$cekDataSebelumnya->tl_project)->first();
                     $memberProject = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->where('mp_user','!=',Auth::user()->us_id)->get();
                     foreach ($memberProject as $key => $person) {
                          DB::table('d_notifications_todolist')->insert([
@@ -1123,6 +1153,9 @@ class ToDoController extends Controller
                             'nt_status' => 'N',
                             'nt_created' => Carbon::now('Asia/Jakarta'),
                         ]);
+
+                         $send_notif = new TokenController();
+                         $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',$request->title . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$person->mp_user);
 
                     }
                 }
@@ -1155,6 +1188,9 @@ class ToDoController extends Controller
                     ]);
                 }
                 if($cekDataSebelumnya->tl_project == null){
+                    $masterNotif = DB::table('m_notifications')->where('n_id','3')->first();
+                    $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
+
                     $memberProject = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
                     foreach ($memberProject as $key => $member) {
                         DB::table('d_notifications_todolist')->insert([
@@ -1166,9 +1202,15 @@ class ToDoController extends Controller
                             'nt_status' => 'N',
                             'nt_created' => Carbon::now('Asia/Jakarta'),
                         ]);
+
+                        $send_notif = new TokenController();
+                        $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',$request->title . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$member->mp_user);
                     }
                 }else{
                     if($cekDataSebelumnya->tl_project != $request->project){
+                        $masterNotifOut = DB::table('m_notifications')->where('n_id','4')->first();
+                        $namaProjectOld = DB::table('d_project')->where('p_id',$cekDataSebelumnya->tl_project)->first();
+
                          $projectMemberOld = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->where('mp_user','!=',Auth::user()->us_id)->get();
                          foreach ($projectMemberOld as $key => $oldmember) {
                             DB::table('d_notifications_todolist')->insert([
@@ -1180,9 +1222,13 @@ class ToDoController extends Controller
                                 'nt_status' => 'N',
                                 'nt_created' => Carbon::now('Asia/Jakarta'),
                             ]);
+                            $send_notif = new TokenController();
+                            $send_notif->sendNotif(''.$masterNotifOut->n_title .' - Todolist',$request->title . ' ' . $masterNotifOut->n_message . ' ' . $namaProjectOld->p_name,$oldmember->mp_user);
                         }
 
                         $projectMemberNew = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                        $masterNotifIn = DB::table('m_notifications')->where('n_id','3')->first();
+                        $namaProjectNew = DB::table('d_project')->where('p_id',$request->tl_project)->first();
                         foreach ($projectMemberNew as $key => $newmember) {
                             DB::table('d_notifications_todolist')->insert([
                                 'nt_notifications' => '3',
@@ -1193,6 +1239,8 @@ class ToDoController extends Controller
                                 'nt_status' => 'N',
                                 'nt_created' => Carbon::now('Asia/Jakarta'),
                             ]);
+                        $send_notif = new TokenController();
+                        $send_notif->sendNotif(''.$masterNotifIn->n_title .' - Todolist',$request->title . ' ' . $masterNotifIn->n_message . ' ' . $namaProjectOld->p_name,$newmember->mp_user);
                         }
 
 
@@ -1257,7 +1305,11 @@ class ToDoController extends Controller
                 'nt_project' => null,
                 'nt_status' => 'N',
                 'nt_created' => Carbon::now('Asia/Jakarta'),
-            ]);
+            ]);            
+            $namaNotif = DB::table('m_notifications')->where('n_id','1')->first();
+            $namaTodo = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            $send_notif = new TokenController();
+            $send_notif->sendNotif(''. $namaNotif->n_title .' - Todolist',Auth::user()->us_name. ' '. $namaNotif->n_message . ' ' . $namaTodo->tl_title,$cekUser->us_id);
 
             DB::commit();
             return response()->json([
@@ -1278,11 +1330,17 @@ class ToDoController extends Controller
                 'nt_notifications' => '2',
                 'nt_todolist' => $request->todolist,
                 'nt_fromuser' => Auth::user()->us_id,
-                'nt_touser' => Auth::user()->us_id,
+                'nt_touser' => $request->member,
                 'nt_project' => null,
                 'nt_status' => 'N',
                 'nt_created' => Carbon::now('Asia/Jakarta'),
             ]);
+            $getMember = DB::table('m_users')->where('us_id',$request->member)->first();
+            $masterNotif = DB::table('m_notifications')->where('n_id','2')->first();
+            $getTodo = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            $send_notif = new TokenController();
+            $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message . ' '.$getTodo->tl_title,$request->member);
+
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -1332,6 +1390,11 @@ class ToDoController extends Controller
             ->where('tlr_todolist', $todo)
             ->where('tlr_users', $user)
                 ->delete();
+            $notifikasi = DB::table('m_notifications')->where('n_id','2')->first();
+            $todolist = DB::table('d_todolist')->where('tl_id',$todo)->first();
+            $getPeserta = DB::table('m_users')->where('us_id',$user)->first();
+            $send_notif = new TokenController();
+            $send_notif->sendNotif(''.$notifikasi->n_title.' - Todolist', Auth::user()->us_name .' '. $notifikasi->n_message . ' ' .$todolist->tl_title ,$user);
 
             DB::table('d_notifications_todolist')->insert([
                 'nt_notifications' => '2',
@@ -1499,11 +1562,15 @@ class ToDoController extends Controller
         setlocale(LC_TIME, 'IND');
         DB::BeginTransaction();
         try {
+            $namaTodo = DB::table('d_todolist')->where('tl_id',$request->todo)->first();
+
             switch ($request->type) {
                 case 'baru mengerjakan':
                      DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                         'tl_exestart' => Carbon::now('Asia/Jakarta'),
                     ]);
+                     $masterNotifstart = DB::table('m_notifications')->where('n_id','7')->first();
+                     // return response()->json($masterNotifstart);
                      $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
                      foreach ($todoMember as $key => $value) {
                          DB::table('d_notifications_todolist')->insert([
@@ -1515,12 +1582,17 @@ class ToDoController extends Controller
                             'nt_status' => 'N',
                             'nt_created' => Carbon::now('Asia/Jakarta'),
                          ]);
+
+                         $send_notif = new TokenController();
+                         $send_notif->sendNotif(''.$masterNotifstart->n_title .' - Todolist',$namaTodo->tl_title . ' ' . $masterNotifstart->n_message,$value->tlr_users);
                      }
                     break;
                 case 'pending':
                          DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                             'tl_status' => 'Pending',
                         ]);
+                         $masterNotifpending = DB::table('m_notifications')->where('n_id','8')->first();
+
                          $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
                      foreach ($todoMember as $key => $value) {
                          DB::table('d_notifications_todolist')->insert([
@@ -1532,9 +1604,12 @@ class ToDoController extends Controller
                             'nt_status' => 'N',
                             'nt_created' => Carbon::now('Asia/Jakarta'),
                          ]);
+                         $send_notif = new TokenController();
+                         $send_notif->sendNotif(''.$masterNotifpending->n_title .' - Todolist',$namaTodo->tl_title . ' ' . $masterNotifpending->n_message,$value->tlr_users);
                      }
                     break;
                 case 'selesai':
+                        $masterNotifdone = DB::table('m_notifications')->where('n_id','9')->first();
                          DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                              'tl_exeend' => Carbon::now('Asia/Jakarta'),
                              'tl_status' => 'Finish',
@@ -1558,9 +1633,13 @@ class ToDoController extends Controller
                             'nt_status' => 'N',
                             'nt_created' => Carbon::now('Asia/Jakarta'),
                          ]);
+                         $send_notif = new TokenController();
+                         $send_notif->sendNotif(''.$masterNotifdone->n_title .' - Todolist',$namaTodo->tl_title . ' ' . $masterNotifdone->n_message,$value->tlr_users);
                      }
                     break;
                 case 'mulai mengerjakan kembali':
+                        $masterNotifstart = DB::table('m_notifications')->where('n_id','7')->first();
+
                          DB::table('d_todolist')->where('tl_id', $request->todo)->update([
                              'tl_status' => 'Open',
                         ]);
@@ -1575,6 +1654,8 @@ class ToDoController extends Controller
                             'nt_status' => 'N',
                             'nt_created' => Carbon::now('Asia/Jakarta'),
                          ]);
+                         $send_notif = new TokenController();
+                         $send_notif->sendNotif(''.$masterNotifstart->n_title .' - Todolist',$namaTodo->tl_title . ' ' . $masterNotifstart->n_message,$value->tlr_users);
                      }
                         break;
                 
