@@ -230,6 +230,7 @@ class ToDoController extends Controller
                 }, function ($query) {
                     return $query->orderBy('tli_todolist','desc');
                 })
+                ->groupBy('tl_id')
                 ->orderBy('tl_planstart','ASC');
 
                 
