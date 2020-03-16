@@ -35,16 +35,33 @@ class ToDoController extends Controller
 
     public function getTodoAction($id)
     {
-        $data = DB::table('d_todolist_action')->join('d_todolist', 'tla_todolist', 'tl_id')->where('tla_todolist', $id)->get();
+        $data = DB::table('d_todolist_action')
+        ->join('d_todolist', 'tla_todolist', 'tl_id')->where('tla_todolist', $id)
+        ->leftJoin('m_users as executor','tla_executeduser','executor.us_id')
+        ->leftJoin('m_users as validator','tla_validationuser','validator.us_id')
+        ->select('executor.us_name As executor','validator.us_name As validator',
+        'tla_number','tla_todolist','tla_title','tl_created','tla_executed','tla_validation','tla_createduser',)
+        ->get();
         $datas = array();
         foreach ($data as $key => $value) {
+            // $users = null;
+            // if($value->validator != null && $value->tla_createduser == Auth::user()->us_id){
+            //     $excutor =  $value->validator;
+            //     $validator = $value->validator;
+
+            // }elseif ($value->executor != null && $value->tla_createduser != Auth::user()->us_id) {
+            //     $users = $value->executor;
+            // }
+
             $arr = [
                 'id' => $value->tla_number,
                 'todo' => $value->tla_todolist,
                 'title' => $value->tla_title,
                 'created'=> $value->tl_created,
                 'done' => $value->tla_executed,
-                'valid' => $value->tla_validation
+                'valid' => $value->tla_validation,
+                'excutor' => $value->executor,
+                'validator' => $value->validator
 
             ];
             array_push($datas, $arr);
@@ -224,16 +241,20 @@ class ToDoController extends Controller
                         ->where('d_todolist_important.tli_users', Auth::user()->us_id);
                 })
                 ->where('tlr_users', Auth::user()->us_id)
-                ->when($sortBy, function ($query, $sortBy) {
-                    return $query->orderBy($sortBy);
+                // ->when($sortBy, function ($query, $sortBy) {
+                //      $query->orderBy($sortBy);
                                  
-                }, function ($query) {
-                    return $query->orderBy('tli_todolist','desc');
+                // }, function ($query) {
+                //      $query->orderBy('tli_todolist','desc')->orderBy('tl_planstart','ASC');
+                // })
+                // ->orderBy('tl_planstart','ASC')
+                ->when(request('tli_todolist', !null), function ($q, $role) { 
+                     $q->orderBy('tl_planstart','ASC');
+                     $q->orderBy('tli_todolist','desc');
                 })
                 ->groupBy('tl_id')
                 ->orderBy('tl_planstart','ASC');
 
-                
 
         $dataPending = Todo::orderBy('tl_planstart', 'ASC')
             ->join('d_todolist_roles', 'tlr_todolist', 'tl_id')
@@ -259,7 +280,9 @@ class ToDoController extends Controller
         if ($type == "1") {
             $data = $data->where(function ($q) {
                 $q->where("tl_planend", '<', Carbon::today())->where('tl_status', '=', 'Open');
-            })->get();
+            })->orderBy('tl_planstart','ASC')->get();
+            // dd($data);
+
         } elseif ($type == "2") {
             $data = $data->where(function ($q) {
                 $q->where("tli_users", '!=', null);
@@ -731,6 +754,18 @@ class ToDoController extends Controller
             array_push($dataFile, $arr);
         }
 
+        $todolistAction = DB::table('d_todolist_action')
+        ->where('tla_todolist',$request->todolist)
+        ->select(DB::raw('count(tla_validation) as jml_validation'),
+        DB::raw('count(tla_created) as jml_semua'))
+        ->first();
+
+        $statusTodoList = 'belumselesai';
+        if($todolistAction){
+            if( $todolistAction->jml_validation == $todolistAction->jml_semua){
+                $statusTodoList = 'sudahselesai';
+            }
+        }
 
         $statusKita = DB::table('d_todolist_roles')
                     ->where('tlr_todolist', $request->todolist)
@@ -743,6 +778,7 @@ class ToDoController extends Controller
             'todo_member' => $member,
             'todo_file' => $dataFile,
             'status_kita' => $statusKita,
+            'status_action' => $statusTodoList,
         ]);
     }
     public function detail_member_todo(Request $request)
@@ -1430,24 +1466,132 @@ class ToDoController extends Controller
     }
     public function todo_ready($id)
     {
-        $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist', $id)->get();
+        // $todoReady = DB::table('d_todolist_ready')->where('tlr_todolist', $id)->get();
+        // return response()->json([
+        //     'todo_ready' => $todoReady,
+        // ]);
+
+        $data = DB::table('d_todolist_ready')
+        ->join('d_todolist', 'tlr_todolist', 'tl_id')->where('tlr_todolist', $id)
+        ->leftJoin('m_users as executor','tlr_executeduser','executor.us_id')
+        ->leftJoin('m_users as validator','tlr_validationuser','validator.us_id')
+        ->select('executor.us_name As executor','validator.us_name As validator',
+        'tlr_number','tlr_todolist','tlr_title','tl_created','tlr_executed','tlr_validation','tlr_createduser',)
+        ->get();
+        $datas = array();
+        foreach ($data as $key => $value) {
+            // $users = null;
+            // if($value->validator != null && $value->tla_createduser == Auth::user()->us_id){
+            //     $excutor =  $value->validator;
+            //     $validator = $value->validator;
+
+            // }elseif ($value->executor != null && $value->tla_createduser != Auth::user()->us_id) {
+            //     $users = $value->executor;
+            // }
+
+            $arr = [
+                'id' => $value->tlr_number,
+                'todo' => $value->tlr_todolist,
+                'title' => $value->tlr_title,
+                'created'=> $value->tl_created,
+                'done' => $value->tlr_executed,
+                'valid' => $value->tlr_validation,
+                'excutor' => $value->executor,
+                'validator' => $value->validator
+
+            ];
+            array_push($datas, $arr);
+        }
         return response()->json([
-            'todo_ready' => $todoReady,
+            'todo_ready' => $datas,
         ]);
     }
     public function todo_normal($id)
     {
-        $todoReady = DB::table('d_todolist_normal')->where('tln_todolist', $id)->get();
+        // $todoReady = DB::table('d_todolist_normal')->where('tln_todolist', $id)->get();
+        // return response()->json([
+        //     'todo_normal' => $todoReady,
+        // ]);
+
+        $data = DB::table('d_todolist_normal')
+        ->join('d_todolist', 'tln_todolist', 'tl_id')->where('tln_todolist', $id)
+        ->leftJoin('m_users as executor','tln_executeduser','executor.us_id')
+        ->leftJoin('m_users as validator','tln_validationuser','validator.us_id')
+        ->select('executor.us_name As executor','validator.us_name As validator',
+        'tln_number','tln_todolist','tln_title','tl_created','tln_executed','tln_validation','tln_createduser',)
+        ->get();
+        $datas = array();
+        foreach ($data as $key => $value) {
+            // $users = null;
+            // if($value->validator != null && $value->tla_createduser == Auth::user()->us_id){
+            //     $excutor =  $value->validator;
+            //     $validator = $value->validator;
+
+            // }elseif ($value->executor != null && $value->tla_createduser != Auth::user()->us_id) {
+            //     $users = $value->executor;
+            // }
+
+            $arr = [
+                'id' => $value->tln_number,
+                'todo' => $value->tln_todolist,
+                'title' => $value->tln_title,
+                'created'=> $value->tl_created,
+                'done' => $value->tln_executed,
+                'valid' => $value->tln_validation,
+                'excutor' => $value->executor,
+                'validator' => $value->validator
+
+            ];
+            array_push($datas, $arr);
+        }
         return response()->json([
-            'todo_normal' => $todoReady,
+            'todo_normal' => $datas,
         ]);
+
+
     }
     public function todo_done($id)
     {
-        $todoReady = DB::table('d_todolist_done')->where('tld_todolist', $id)->get();
+        // $todoReady = DB::table('d_todolist_done')->where('tld_todolist', $id)->get();
+        // return response()->json([
+        //     'todo_done' => $todoReady,
+        // ]);
+
+        $data = DB::table('d_todolist_done')
+        ->join('d_todolist', 'tld_todolist', 'tl_id')->where('tld_todolist', $id)
+        ->leftJoin('m_users as executor','tld_executeduser','executor.us_id')
+        ->leftJoin('m_users as validator','tld_validationuser','validator.us_id')
+        ->select('executor.us_name As executor','validator.us_name As validator',
+        'tld_number','tld_todolist','tld_title','tl_created','tld_executed','tld_validation','tld_createduser',)
+        ->get();
+        $datas = array();
+        foreach ($data as $key => $value) {
+            // $users = null;
+            // if($value->validator != null && $value->tla_createduser == Auth::user()->us_id){
+            //     $excutor =  $value->validator;
+            //     $validator = $value->validator;
+
+            // }elseif ($value->executor != null && $value->tla_createduser != Auth::user()->us_id) {
+            //     $users = $value->executor;
+            // }
+
+            $arr = [
+                'id' => $value->tld_number,
+                'todo' => $value->tld_todolist,
+                'title' => $value->tld_title,
+                'created'=> $value->tl_created,
+                'done' => $value->tld_executed,
+                'valid' => $value->tld_validation,
+                'excutor' => $value->executor,
+                'validator' => $value->validator
+
+            ];
+            array_push($datas, $arr);
+        }
         return response()->json([
-            'todo_done' => $todoReady,
+            'todo_done' => $datas,
         ]);
+        
     }
     public function validation_listtodo(Request $request)
     {
