@@ -252,7 +252,8 @@ class ToDoController extends Controller
                      $q->orderBy('tl_planstart','ASC');
                      $q->orderBy('tli_todolist','desc');
                 })
-                ;
+                ->groupBy('tl_id')
+                ->orderBy('tl_planstart','ASC');
 
 
         $dataPending = Todo::orderBy('tl_planstart', 'ASC')

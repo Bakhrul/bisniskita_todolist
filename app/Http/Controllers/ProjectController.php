@@ -279,7 +279,7 @@ class ProjectController extends Controller
             'tl_updated' => Carbon::now('Asia/Jakarta'),
         ]);
 
-        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
         $masterNotif = DB::table('m_notifications')->where('n_id','3')->first();
         $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
         foreach ($getMember as $key => $value) {
