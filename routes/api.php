@@ -103,4 +103,6 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/get_friend_acc','FriendListController@get_friend_acc');
     Route::get('/getnotifications','NotificationsController@get_notif');
     Route::post('/deletepesan_notifikasi','NotificationsController@delete_notif');
+    Route::post('/todo/listaction/update','ToDoController@update_todoaction');
+    Route::post('/todo/listaction/delete','ToDoController@delete_todoaction');
 });

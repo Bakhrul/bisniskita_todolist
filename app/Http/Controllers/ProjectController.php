@@ -510,6 +510,7 @@ class ProjectController extends Controller
                 'p_timeend' => Carbon::parse($request->tanggal_akhir),
                 'p_desc' => $request->deskripsi_project,
                 'p_status' => $status,
+                'p_updated' => Carbon::now('Asia/Jakarta'),
             ]);
             DB::commit();
             return response()->json([

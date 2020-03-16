@@ -20,6 +20,7 @@ class NotificationsController extends Controller
     	->select('nt_notifications','n_title','n_message','tablepenerima.us_name as namapenerima','tablepengirim.us_name as namapengirim','nt_status','nt_todolist','n_title','p_name','tl_title','nt_id')
     	->orderBy('nt_id','DESC')
     	->get();
+        return json_encode($notifikasi);
 
     	DB::table('d_notifications_todolist')->where('nt_touser',Auth::user()->us_id)->update([
     		'nt_status' => 'Y'

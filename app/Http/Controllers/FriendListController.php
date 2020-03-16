@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use DB;
 use Auth;
 use Carbon\Carbon;
+use App\Http\Controllers\TokenController;
 
 class FriendListController extends Controller
 {
@@ -55,7 +56,12 @@ class FriendListController extends Controller
                                 ->where('fl_users', Auth::user()->us_id)
                                 ->where('fl_friend', $cariFriend->us_id)
                                 ->first();
-
+            if($request->email == Auth::user()->us_email){
+                return response()->json([
+                    'status' => 'emailsendiri',
+                    'message' => 'Email Ini Merupakan Email Akun Anda Sendiri',
+                ]);
+            }
             if ($availableFriend != null) {
                 if ($availableFriend->fl_approved == null && $availableFriend->fl_denied == null) {
                     return response()->json([
@@ -81,6 +87,19 @@ class FriendListController extends Controller
                 'fl_approved' => null,
                 'fl_denied' => null,
             ]);
+
+            DB::table('d_notifications_todolist')->insert([
+                'nt_notifications' => '10',
+                'nt_todolist' => null,
+                'nt_project' => null,
+                'nt_fromuser' => Auth::user()->us_id,
+                'nt_touser' => $cariFriend->us_id,
+                'nt_status' => 'N',
+                'nt_created' => Carbon::now('Asia/Jakarta'),
+            ]);
+            $masterNotif = DB::table('m_notifications')->where('n_id','10')->first();
+            $send_notif = new TokenController();
+            $send_notif->sendNotif(''.$masterNotif->n_title.' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message,$cariFriend->us_id);
             DB::commit();
             return response()->json([
                 'status' => 'success',
@@ -99,9 +118,35 @@ class FriendListController extends Controller
             if ($request->type_confirmation == 'terima') {
                 $dateAcc = Carbon::now('Asia/Jakarta');
                 $dateDenied = null;
+                $masterNotif = DB::table('m_notifications')->where('n_id','11')->first();
+                DB::table('d_notifications_todolist')->insert([
+                    'nt_notifications' => '11',
+                    'nt_todolist' => null,
+                    'nt_project' => null,
+                    'nt_fromuser' => Auth::user()->us_id,
+                    'nt_touser' => $request->friend,
+                    'nt_status' => 'N',
+                    'nt_created' => Carbon::now('Asia/Jakarta'),
+                ]);
+
+                $send_notif = new TokenController();
+                $send_notif->sendNotif(''.$masterNotif->n_title.' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message,$request->friend);
             } else {
                 $dateAcc = null;
                 $dateDenied = Carbon::now('Asia/Jakarta');
+                $masterNotif = DB::table('m_notifications')->where('n_id','12')->first();
+                DB::table('d_notifications_todolist')->insert([
+                    'nt_notifications' => '12',
+                    'nt_todolist' => null,
+                    'nt_project' => null,
+                    'nt_fromuser' => Auth::user()->us_id,
+                    'nt_touser' => $request->friend,
+                    'nt_status' => 'N',
+                    'nt_created' => Carbon::now('Asia/Jakarta'),
+                ]);
+
+                $send_notif = new TokenController();
+                $send_notif->sendNotif(''.$masterNotif->n_title.' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message,$request->friend);
             }
             DB::table('d_friendlist')->where('fl_users', $request->friend)->where('fl_friend', Auth::user()->us_id)->update([
                 'fl_approved' => $dateAcc,

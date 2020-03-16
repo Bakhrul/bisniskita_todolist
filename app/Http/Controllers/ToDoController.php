@@ -644,8 +644,6 @@ class ToDoController extends Controller
                         'tlr_role' => $value->mp_role,
                         'tlr_own' => 'P',
                     ]);
-
-                    if($value->mp_user != Auth::user()->us_id){
                         DB::table('d_notifications_todolist')->insert([
                         'nt_notifications' => '3',
                         'nt_todolist' => $todo->tl_id,
@@ -657,8 +655,7 @@ class ToDoController extends Controller
                         'nt_created' => Carbon::now('Asia/Jakarta'),
                         ]);
                         $send_notif = new TokenController();
-                        $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',$request->title . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,'12');
-                    }
+                        $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',$request->title . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$value->mp_user);
                 }
             }
             DB::commit();
@@ -1143,7 +1140,7 @@ class ToDoController extends Controller
                 if($cekDataSebelumnya->tl_project != null){
                     $masterNotif = DB::table('m_notifications')->where('n_id','4')->first();
                     $namaProject = DB::table('d_project')->where('p_id',$cekDataSebelumnya->tl_project)->first();
-                    $memberProject = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                    $memberProject = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->get();
                     foreach ($memberProject as $key => $person) {
                          DB::table('d_notifications_todolist')->insert([
                             'nt_notifications' => '4',
@@ -1192,7 +1189,7 @@ class ToDoController extends Controller
                     $masterNotif = DB::table('m_notifications')->where('n_id','3')->first();
                     $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
 
-                    $memberProject = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                    $memberProject = DB::table('d_project_member')->where('mp_project',$request->project)->get();
                     foreach ($memberProject as $key => $member) {
                         DB::table('d_notifications_todolist')->insert([
                             'nt_notifications' => '3',
@@ -1212,7 +1209,7 @@ class ToDoController extends Controller
                         $masterNotifOut = DB::table('m_notifications')->where('n_id','4')->first();
                         $namaProjectOld = DB::table('d_project')->where('p_id',$cekDataSebelumnya->tl_project)->first();
 
-                         $projectMemberOld = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                         $projectMemberOld = DB::table('d_project_member')->where('mp_project',$cekDataSebelumnya->tl_project)->get();
                          foreach ($projectMemberOld as $key => $oldmember) {
                             DB::table('d_notifications_todolist')->insert([
                                 'nt_notifications' => '4',
@@ -1227,7 +1224,7 @@ class ToDoController extends Controller
                             $send_notif->sendNotif(''.$masterNotifOut->n_title .' - Todolist',$request->title . ' ' . $masterNotifOut->n_message . ' ' . $namaProjectOld->p_name,$oldmember->mp_user);
                         }
 
-                        $projectMemberNew = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
+                        $projectMemberNew = DB::table('d_project_member')->where('mp_project',$request->project)->get();
                         $masterNotifIn = DB::table('m_notifications')->where('n_id','3')->first();
                         $namaProjectNew = DB::table('d_project')->where('p_id',$request->tl_project)->first();
                         foreach ($projectMemberNew as $key => $newmember) {
@@ -1702,6 +1699,70 @@ class ToDoController extends Controller
             return response()->json([
                 'status' => 'success',
             ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function update_todoaction(Request $request){
+        DB::BeginTransaction();
+        try {
+            switch ($request->type) {
+                            case 'done':
+                                DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->where('tld_number',$request->idchildtodolist)->update([
+                                    'tld_title' => $request->title,
+                                ]);
+                                break;
+                                case 'action':
+                                DB::table('d_todolist_action')->where('tla_todolist',$request->todolist)->where('tla_number',$request->idchildtodolist)->update([
+                                    'tla_title' => $request->title,
+                                ]);
+                                break;
+                                 case 'ready':
+                                DB::table('d_todolist_ready')->where('tlr_todolist',$request->todolist)->where('tlr_number',$request->idchildtodolist)->update([
+                                    'tlr_title' => $request->title,
+                                ]);
+                                break;
+                                 case 'normal':
+                                DB::table('d_todolist_normal')->where('tln_todolist',$request->todolist)->where('tln_number',$request->idchildtodolist)->update([
+                                    'tln_title' => $request->title,
+                                ]);
+                                break;
+
+                               
+                        }      
+                         DB::commit();
+                                return response()->json([
+                                    'status' => 'success',
+                                ]);      
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+      public function delete_todoaction(Request $request){
+        DB::BeginTransaction();
+        try {
+            switch ($request->type) {
+                            case 'done':
+                                DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->where('tld_number',$request->idchildtodolist)->delete();
+                                break;
+                                case 'action':
+                                DB::table('d_todolist_action')->where('tla_todolist',$request->todolist)->where('tla_number',$request->idchildtodolist)->delete();
+                                break;
+                                 case 'ready':
+                                DB::table('d_todolist_ready')->where('tlr_todolist',$request->todolist)->where('tlr_number',$request->idchildtodolist)->delete();
+                                break;
+                                 case 'normal':
+                                DB::table('d_todolist_normal')->where('tln_todolist',$request->todolist)->where('tln_number',$request->idchildtodolist)->delete();
+                                break;
+
+                               
+                        }      
+                         DB::commit();
+                                return response()->json([
+                                    'status' => 'success',
+                                ]);      
         } catch (Exception $e) {
             DB::rollback();
             return $e;
