@@ -40,7 +40,7 @@ class ToDoController extends Controller
         ->leftJoin('m_users as executor','tla_executeduser','executor.us_id')
         ->leftJoin('m_users as validator','tla_validationuser','validator.us_id')
         ->select('executor.us_name As executor','validator.us_name As validator',
-        'tla_number','tla_todolist','tla_title','tl_created','tla_executed','tla_validation','tla_createduser',)
+        'tla_number','tla_todolist','tla_title','tl_created','tla_executed','tla_validation','tla_createduser')
         ->get();
         $datas = array();
         foreach ($data as $key => $value) {
