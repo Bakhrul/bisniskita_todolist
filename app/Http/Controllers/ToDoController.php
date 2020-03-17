@@ -1464,7 +1464,7 @@ class ToDoController extends Controller
         ->leftJoin('m_users as executor','tlr_executeduser','executor.us_id')
         ->leftJoin('m_users as validator','tlr_validationuser','validator.us_id')
         ->select('executor.us_name As executor','validator.us_name As validator',
-        'tlr_number','tlr_todolist','tlr_title','tl_created','tlr_executed','tlr_validation','tlr_createduser',)
+        'tlr_number','tlr_todolist','tlr_title','tl_created','tlr_executed','tlr_validation','tlr_createduser')
         ->get();
         $datas = array();
         foreach ($data as $key => $value) {
@@ -1506,7 +1506,7 @@ class ToDoController extends Controller
         ->leftJoin('m_users as executor','tln_executeduser','executor.us_id')
         ->leftJoin('m_users as validator','tln_validationuser','validator.us_id')
         ->select('executor.us_name As executor','validator.us_name As validator',
-        'tln_number','tln_todolist','tln_title','tl_created','tln_executed','tln_validation','tln_createduser',)
+        'tln_number','tln_todolist','tln_title','tl_created','tln_executed','tln_validation','tln_createduser')
         ->get();
         $datas = array();
         foreach ($data as $key => $value) {
@@ -1550,7 +1550,7 @@ class ToDoController extends Controller
         ->leftJoin('m_users as executor','tld_executeduser','executor.us_id')
         ->leftJoin('m_users as validator','tld_validationuser','validator.us_id')
         ->select('executor.us_name As executor','validator.us_name As validator',
-        'tld_number','tld_todolist','tld_title','tl_created','tld_executed','tld_validation','tld_createduser',)
+        'tld_number','tld_todolist','tld_title','tl_created','tld_executed','tld_validation','tld_createduser')
         ->get();
         $datas = array();
         foreach ($data as $key => $value) {
