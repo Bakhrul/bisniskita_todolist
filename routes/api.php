@@ -18,6 +18,8 @@ Route::post('/user/register', 'UserController@register');
 Route::post('/reset_password','ResetPasswordController@reminder_password');
 
 Route::group(['middleware' => 'auth:api'], function(){
+
+    Route::post('/tracking','UserController@tracking_user');
     Route::post('tesnotif','ToDoController@tesnotif');
     Route::post('/updateTokenFcm','TokenController@updateToken');
     Route::get('/checkversion/{id}', 'VersionController@checkversion');

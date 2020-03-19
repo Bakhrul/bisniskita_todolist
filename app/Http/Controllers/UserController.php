@@ -170,4 +170,27 @@ class UserController extends Controller
 
         return response()->json($User);
     }
+
+    public function tracking_user(Request $request)
+    {
+        DB::BeginTransaction();
+
+        try {
+            $data = DB::table('d_log_tracking')->insert(
+                [
+                    'lk_user'       => Auth::user()->us_id,
+                    'lk_lat'        => $request->latitude,
+                    'lk_long'       => $request->longitude,
+                    'lk_created'    => Carbon::now()
+                ]
+            );
+            DB::commit();
+            return response()->json(['message' => 'success']);
+        } catch (\Throwable $th) {
+            //throw $th;
+            DB::rollback();
+            return $th;
+        }
+
+    }
 }
