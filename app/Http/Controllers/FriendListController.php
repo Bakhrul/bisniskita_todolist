@@ -204,4 +204,16 @@ class FriendListController extends Controller
 
     	return response()->json($friend);
     }
+    public function trackingFriend(){
+        $friend = DB::table('d_log_tracking')
+        ->orderBy('lk_created','DESC')
+        ->groupBy('lk_user')
+        ->join('d_friendlist','lk_user','fl_friend')
+        ->join('m_users','lk_user','us_id')
+        ->where('d_friendlist.fl_users',Auth::user()->us_id)
+        ->where('d_friendlist.fl_approved','!=',NULL)
+        ->get();
+
+        return response()->json($friend);
+    }
 }

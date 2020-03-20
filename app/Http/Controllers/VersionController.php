@@ -25,6 +25,34 @@ class VersionController extends Controller
             return response()->json('Expired');
         }
         
-        
+    }
+    public function cekversi_aplikasi(Request $request){
+
+        $isTerbaru = DB::table('d_version')->orderBy('v_id','DESC')->first();
+        $cekversiDB = DB::table('d_version')->where('v_id',$request->version)->first();
+        if($isTerbaru->v_id == $request->version){
+            return response()->json([
+                'status' => 'sudah terbaru',
+            ]);
+        }
+        if($isTerbaru->v_id != $request->version){
+            if($isTerbaru->v_id > $request->version){
+                if($cekversiDB->v_isactived == 'Y'){
+                    return response()->json([
+                        'status' => 'rekomendasi update',
+                    ]);    
+                }else{
+                        return response()->json([
+                            'status' => 'wajib update',
+                        ]);    
+                }    
+            }else{
+                return response()->json([
+                    'status' => 'sudah terbaru',
+                ]);
+            }
+            
+            
+        }
     }
 }

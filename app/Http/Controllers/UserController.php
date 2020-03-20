@@ -170,4 +170,23 @@ class UserController extends Controller
 
         return response()->json($User);
     }
+    public function lokasiterkini(Request $request){
+        DB::beginTransaction();
+        try {
+
+            DB::table('d_log_tracking')->insert([
+                'lk_user' => Auth::user()->us_id,
+                'lk_lat' => $request->latitude,
+                'lk_long' => $request->longitude,
+                'lk_created' => Carbon::now('Asia/Jakarta'),
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
 }

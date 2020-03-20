@@ -24,6 +24,7 @@ class ProjectController extends Controller
     public function dashboard(){
         $countnotif = DB::table('d_notifications_todolist')->where('nt_touser',Auth::user()->us_id)->where('nt_status','N')->count();
         $data = Project::leftJoin('d_project_member','mp_project','p_id')
+        ->where('p_archive','N')
         ->where('mp_user',Auth::user()->us_id)
         ->with(['role' => function($q){
             $q->with('user');
@@ -278,8 +279,13 @@ class ProjectController extends Controller
             'tl_created' => Carbon::now('Asia/Jakarta'),
             'tl_updated' => Carbon::now('Asia/Jakarta'),
         ]);
-
-        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->get();
+        DB::table('d_todolist_roles')->insert([
+            'tlr_todolist' => $maxIdTodo,
+            'tlr_users' => Auth::user()->us_id,
+            'tlr_role' => '1',
+            'tlr_own' => 'T',
+        ]);
+        $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->where('mp_user','!=',Auth::user()->us_id)->get();
         $masterNotif = DB::table('m_notifications')->where('n_id','3')->first();
         $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
         foreach ($getMember as $key => $value) {
@@ -417,9 +423,9 @@ class ProjectController extends Controller
     }
     public function getdata_project(Request $request){
         $primary =
-         DB::table('d_project_member')->join('d_project','mp_project','p_id')->where('mp_user',Auth::user()->us_id)->groupBy('p_id');
+         DB::table('d_project_member')->join('d_project','mp_project','p_id')->where('mp_user',Auth::user()->us_id)->where('d_project.p_archive','!=','Y')->groupBy('p_id');
         if($request->filter == null){
-            $project = $primary->where('p_name','LIKE', $request->filter .'%')->get();
+            $project = $primary->where('p_name','LIKE', '%' .$request->filter .'%')->get();
         }else{
             $project = $primary->get();
         }
@@ -492,24 +498,12 @@ class ProjectController extends Controller
     }
     public function update_data_project(Request $request){
         DB::beginTransaction();
-        $dataStatus = DB::table('d_project')->where('p_id',$request->project)->value('p_status');
-        $status = 'Open';
-        if($dataStatus != 'Open'){
-            if(Carbon::parse($request->tanggal_akhir) < Carbon::today()){
-             $status = 'Finish';
-
-            }else{
-            $status = 'Pending';
-
-            }
-        }
         try {
             DB::table('d_project')->where('p_id',$request->project)->update([
                 'p_name' => $request->nama_project,
                 'p_timestart' => Carbon::parse($request->tanggal_awal),
                 'p_timeend' => Carbon::parse($request->tanggal_akhir),
                 'p_desc' => $request->deskripsi_project,
-                'p_status' => $status,
                 'p_updated' => Carbon::now('Asia/Jakarta'),
             ]);
             DB::commit();
@@ -525,7 +519,13 @@ class ProjectController extends Controller
     public function started_project(Request $request){
         DB::beginTransaction();
         try {
-            
+            $cekStatusKita = DB::table('d_project_member')->where('mp_user',Auth::user()->us_id)->where('mp_project',$request->project)->first();
+            if($cekStatusKita->mp_role == '3' || $cekStatusKita->mp_role == 3 || $cekStatusKita->mp_role == '4' || $cekStatusKita->mp_role == 4 ){
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Anda Tidak Memiliki Akses Untuk Melakukan Aksi Ini',
+                ]);
+            }
             switch ($request->type) {
                 case 'baru mengerjakan':
                     DB::table('d_project')->where('p_id',$request->project)->update([
@@ -538,8 +538,19 @@ class ProjectController extends Controller
                     ]);
                     break;
                 case 'selesai mengerjakan':
+                    $cekSemuaTodo = DB::table('d_todolist')
+                                    ->where('tl_project',$request->project)
+                                    ->where('tl_status','!=' ,'Finish')
+                                    ->count();
+                    if($cekSemuaTodo > 0){
+                        return response()->json([
+                            'status' => 'failed',
+                            'message' => 'Untuk Menyelesaikan Project, Pastikan Semua ToDo Telah Selesai.'
+                        ]);
+                    }
                     DB::table('d_project')->where('p_id',$request->project)->update([
                         'p_status' => 'Finish',
+                        'p_archive' => 'Y',
                     ]);
                     break;
                 case 'mulai mengerjakan lagi':
@@ -552,6 +563,7 @@ class ProjectController extends Controller
             DB::commit();
             return response()->json([
                 'status' => 'success',
+                'message' => 'Berhasil !',
             ]);
 
         } catch (Exception $e) {
@@ -601,7 +613,163 @@ class ProjectController extends Controller
             return $e;
         }
     }
+    public function batalkan_project(Request $request){
+        DB::beginTransaction();
+        try {
+             $cekStatusKita = DB::table('d_project_member')->where('mp_user',Auth::user()->us_id)->where('mp_project',$request->project)->first();
+            if($cekStatusKita != null){
+                if($cekStatusKita->mp_role == '3' || $cekStatusKita->mp_role == 3 || $cekStatusKita->mp_role == 4 || $cekStatusKita->mp_role == '4'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Anda Tidak Memiliki Akses Untuk Membatalkan Project',
+                    ]);
+                }
+            }
+            $Project = DB::table('d_project')->where('p_id',$request->project)->first();
+            if($Project != null){
+                if($Project->p_status == 'Finish'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Tidak Dapat Membatalkan Project, Project Ini Sudah Selesai',
+                    ]);
+                }
+            }
+            
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_status' => 'Cancel',
+            ]);
+            $masterNotif = DB::table('m_notifications')->where('n_id','13')->first();
+            $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->groupBy('mp_user')->get();
+            $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
+            foreach ($getMember as $key => $value) {
+                 DB::table('d_notifications_todolist')->insert([
+                    'nt_notifications' => '13',
+                    'nt_todolist' => null,
+                    'nt_project' => $request->project,
+                    'nt_fromuser'=> Auth::user()->us_id,
+                    'nt_touser' => $value->mp_user,
+                    'nt_status' => 'N',
+                    'nt_created' => Carbon::now('Asia/Jakarta'),
+                ]);
+                $send_notif = new TokenController();
+                $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$value->mp_user);
 
+            }
+
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil Membatalkan Project.',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+     public function aktifkan_project(Request $request){
+        DB::beginTransaction();
+        try {
+            $cekStatusKita = DB::table('d_project_member')->where('mp_user',Auth::user()->us_id)->where('mp_project',$request->project)->first();
+            if($cekStatusKita != null){
+                if($cekStatusKita->mp_role == '3' || $cekStatusKita->mp_role == 3 || $cekStatusKita->mp_role == 4 || $cekStatusKita->mp_role == '4'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Anda Tidak Memiliki Akses Untuk Mengaktifkan Project',
+                    ]);
+                }
+            }
+            
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_status' => 'Open',
+            ]);
+            $masterNotif = DB::table('m_notifications')->where('n_id','14')->first();
+            $getMember = DB::table('d_project_member')->where('mp_project',$request->project)->groupBy('mp_user')->get();
+            $namaProject = DB::table('d_project')->where('p_id',$request->project)->first();
+            foreach ($getMember as $key => $value) {
+                 DB::table('d_notifications_todolist')->insert([
+                    'nt_notifications' => '14',
+                    'nt_todolist' => null,
+                    'nt_project' => $request->project,
+                    'nt_fromuser'=> Auth::user()->us_id,
+                    'nt_touser' => $value->mp_user,
+                    'nt_status' => 'N',
+                    'nt_created' => Carbon::now('Asia/Jakarta'),
+                ]);
+                $send_notif = new TokenController();
+                $send_notif->sendNotif(''.$masterNotif->n_title .' - Todolist',Auth::user()->us_name . ' ' . $masterNotif->n_message . ' ' . $namaProject->p_name,$value->mp_user);
+
+            }
+           
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil Mengaktifkan Kembali Project',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function arsip_project(Request $request){
+        DB::beginTransaction();
+        try {
+            $cekStatusKita = DB::table('d_project_member')->where('mp_user',Auth::user()->us_id)->where('mp_user',Auth::user()->us_id)->where('mp_project',$request->project)->first();
+            if($cekStatusKita != null){
+                if($cekStatusKita->mp_role == 3 || $cekStatusKita->mp_role == '3' || $cekStatusKita->mp_role == '4' || $cekStatusKita->mp_role == 4){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Anda Tidak Memiliki Akses Untuk Mengarsipkan Project Ini',
+                    ]);
+                }
+            }
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_archive' => 'Y',
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil Mengarsipkan Project Ini',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function buka_arsip_project(Request $request){
+         DB::beginTransaction();
+        try {
+            $cekStatusKita = DB::table('d_project_member')->where('mp_user',Auth::user()->us_id)->where('mp_user',Auth::user()->us_id)->where('mp_project',$request->project)->first();
+            if($cekStatusKita != null){
+                if($cekStatusKita->mp_role == 3 || $cekStatusKita->mp_role == '3' || $cekStatusKita->mp_role == '4' || $cekStatusKita->mp_role == 4){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Anda Tidak Memiliki Akses Untuk Membuka Arsip Project Ini',
+                    ]);
+                }
+            }
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_archive' => 'N',
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil Membuka Arsip Project Ini',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
+    public function get_arsip_project(){
+        $projectArsip = DB::table('d_project_member')
+                            ->whereIn('mp_role',['1','2'])
+                            ->where('mp_user',Auth::user()->us_id)
+                            ->join('d_project','mp_project','p_id')
+                            ->where('d_project.p_archive','Y')
+                            ->get();
+
+        return response()->json($projectArsip);
+    }
     /**
      * Show the form for creating a new resource.
      *

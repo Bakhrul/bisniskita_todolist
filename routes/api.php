@@ -16,8 +16,10 @@ use Illuminate\Http\Request;
 Route::post('/user/register', 'UserController@register');
 
 Route::post('/reset_password','ResetPasswordController@reminder_password');
-
+Route::post('/checkversionaplikasi','VersionController@cekversi_aplikasi');
 Route::group(['middleware' => 'auth:api'], function(){
+    Route::get('/trackingFriend','FriendListController@trackingFriend');
+    Route::post('/kirimlokasiterkini','UserController@lokasiterkini');
     Route::post('tesnotif','ToDoController@tesnotif');
     Route::post('/updateTokenFcm','TokenController@updateToken');
     Route::get('/checkversion/{id}', 'VersionController@checkversion');
@@ -88,6 +90,11 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::post('/searc_todo_project','ToDoController@search_todo_project');
     Route::post('/detail_member_project','ProjectController@detail_member_project');
     Route::post('/delete_project','ProjectController@delete_project');
+    Route::post('/batalkan_project','ProjectController@batalkan_project');
+    Route::post('/aktifkan_project','ProjectController@aktifkan_project');
+    Route::post('/arsip_project','ProjectController@arsip_project');
+    Route::post('/buka_arsip_project','ProjectController@buka_arsip_project');
+    Route::get('/get_arsip_project','ProjectController@get_arsip_project');
 
     Route::post('/update_data_project','ProjectController@update_data_project');
     Route::post('/project/started-project','ProjectController@started_project');
