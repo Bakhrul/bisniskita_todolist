@@ -20,6 +20,9 @@ Route::post('/checkversionaplikasi','VersionController@cekversi_aplikasi');
 Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/trackingFriend','FriendListController@trackingFriend');
     Route::post('/kirimlokasiterkini','UserController@lokasiterkini');
+
+    Route::post('/tracking','UserController@tracking_user');
+
     Route::post('tesnotif','ToDoController@tesnotif');
     Route::post('/updateTokenFcm','TokenController@updateToken');
     Route::get('/checkversion/{id}', 'VersionController@checkversion');
