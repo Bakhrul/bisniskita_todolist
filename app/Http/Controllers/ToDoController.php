@@ -1098,22 +1098,22 @@ class ToDoController extends Controller
                         if($cekstatusProject->p_status == 'Open'){
                             return response()->json([
                                 'status' => 'failed',
-                                'message' => 'Tidak Dapat Melakukan '.$request->typedone.', Project '. $cekstatusProject->p_name .' Masih Belum Mulai Dikerjakan.', 
+                                'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, Project '. $cekstatusProject->p_name .' Masih Belum Mulai Dikerjakan.', 
                             ]);
                         }else if( $cekstatusProject->p_status == 'Pending'){
                              return response()->json([
                                 'status' => 'failed',
-                                'message' => 'Tidak Dapat Melakukan '.$request->typedone.', Project '. $cekstatusProject->p_name .' Dalam Status Pending.', 
+                                'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, Project '. $cekstatusProject->p_name .' Dalam Status Pending.', 
                             ]);
                         }else if( $cekstatusProject->p_status == 'Finish'){
                              return response()->json([
                                 'status' => 'failed',
-                                'message' => 'Tidak Dapat Melakukan '.$request->typedone.', Project '. $cekstatusProject->p_name .' Sudah Selesai Dikerjakan.', 
+                                'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, Project '. $cekstatusProject->p_name .' Sudah Selesai Dikerjakan.', 
                             ]);
                         }else if( $cekstatusProject->p_status == 'Cancel'){
                              return response()->json([
                                 'status' => 'failed',
-                                'message' => 'Tidak Dapat Melakukan '.$request->typedone.', Project '. $cekstatusProject->p_name .' Dibatalkan.', 
+                                'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, Project '. $cekstatusProject->p_name .' Dibatalkan.', 
                             ]);
                         }
                     }
@@ -1124,17 +1124,17 @@ class ToDoController extends Controller
                 if($cekStatusTodo->tl_status == 'Open' && $cekStatusTodo->tl_exestart == NULL){
                     return response()->json([
                         'status' => 'failed',
-                        'message' => 'Tidak Dapat Melakukan '.$request->typedone.', ToDo ' . $cekStatusTodo->tl_title . ' Masih Belum Mulai Dikerjakan',
+                        'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, ToDo ' . $cekStatusTodo->tl_title . ' Masih Belum Mulai Dikerjakan',
                     ]);
                 }else if($cekStatusTodo->tl_status == 'Pending'){
                     return response()->json([
                         'status' => 'failed',
-                        'message' => 'Tidak Dapat Melakukan '.$request->typedone.', ToDo ' . $cekStatusTodo->tl_title . ' Dalam Tahap Pending',
+                        'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, ToDo ' . $cekStatusTodo->tl_title . ' Dalam Tahap Pending',
                     ]);
                 }else if($cekStatusTodo->tl_status == 'Finish'){
                     return response()->json([
                         'status' => 'failed',
-                        'message' => 'Tidak Dapat Melakukan '.$request->typedone.', ToDo ' . $cekStatusTodo->tl_title . ' Sudah Selesai Dikerjakan',
+                        'message' => 'Tidak Dapat Melakukan Konfirmasi Selesai, ToDo ' . $cekStatusTodo->tl_title . ' Sudah Selesai Dikerjakan',
                     ]);
                 }
             }
