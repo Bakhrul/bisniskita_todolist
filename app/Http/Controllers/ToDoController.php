@@ -911,54 +911,6 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
-            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todo)->first();
-            if($cekTodoProject != null){
-                if($cekTodoProject->tl_project != null){
-                    $cekstatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
-                    if($cekstatusProject != null){
-                        if($cekstatusProject->p_status == 'Open'){
-                            return response()->json([
-                                'status' => 'failed',
-                                'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', Project '. $cekstatusProject->p_name .' Masih Belum Mulai Dikerjakan.', 
-                            ]);
-                        }else if( $cekstatusProject->p_status == 'Pending'){
-                             return response()->json([
-                                'status' => 'failed',
-                                'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', Project '. $cekstatusProject->p_name .' Dalam Status Pending.', 
-                            ]);
-                        }else if( $cekstatusProject->p_status == 'Finish'){
-                             return response()->json([
-                                'status' => 'failed',
-                                'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', Project '. $cekstatusProject->p_name .' Sudah Selesai Dikerjakan.', 
-                            ]);
-                        }else if( $cekstatusProject->p_status == 'Cancel'){
-                             return response()->json([
-                                'status' => 'failed',
-                                'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', Project '. $cekstatusProject->p_name .' Dibatalkan.', 
-                            ]);
-                        }
-                    }
-                }
-            }
-            $cekStatusTodo = DB::table('d_todolist')->where('tl_id',$request->todo)->first();
-            if($cekStatusTodo != null){
-                if($cekStatusTodo->tl_status == 'Open' && $cekStatusTodo->tl_exestart == NULL){
-                    return response()->json([
-                        'status' => 'failed',
-                        'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', ToDo ' . $cekStatusTodo->tl_title . ' Masih Belum Mulai Dikerjakan',
-                    ]);
-                }else if($cekStatusTodo->tl_status == 'Pending'){
-                    return response()->json([
-                        'status' => 'failed',
-                        'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', ToDo ' . $cekStatusTodo->tl_title . ' Dalam Tahap Pending',
-                    ]);
-                }else if($cekStatusTodo->tl_status == 'Finish'){
-                    return response()->json([
-                        'status' => 'failed',
-                        'message' => 'Tidak Dapat Menambah ToDo '.$request->type.', ToDo ' . $cekStatusTodo->tl_title . ' Sudah Selesai Dikerjakan',
-                    ]);
-                }
-            }
             switch ($request->type) {
                 case 'Action':
                     $subId = DB::table('d_todolist_action')->where('tla_todolist', $request->todo)->max('tla_number') + 1;
