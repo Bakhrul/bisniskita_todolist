@@ -17,7 +17,7 @@ class NotificationsController extends Controller
     	->leftJoin('d_project','nt_project','p_id')
     	->leftJoin('d_todolist','nt_todolist','tl_id')
     	->where('nt_touser',Auth::user()->us_id)
-    	->select('nt_notifications','n_title','n_message','tablepenerima.us_name as namapenerima','tablepengirim.us_name as namapengirim','nt_status','nt_todolist','n_title','p_name','tl_title','nt_id')
+    	->select('nt_notifications','n_title','n_message','tablepenerima.us_name as namapenerima','tablepengirim.us_name as namapengirim','nt_status','nt_todolist','n_title','p_name','tl_title','nt_id','nt_created')
     	->orderBy('nt_id','DESC')
     	->get();
     	DB::table('d_notifications_todolist')->where('nt_touser',Auth::user()->us_id)->update([

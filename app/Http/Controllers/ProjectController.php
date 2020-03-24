@@ -356,6 +356,25 @@ class ProjectController extends Controller
     public function delete_todo_project(Request $request){
      DB::beginTransaction();
         try {
+          $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
         DB::table('d_todolist')->where('tl_project',$request->project)->where('tl_id',$request->todolist)->delete();
         DB::table('d_todolist_action')->where('tla_todolist',$request->todolist)->delete();
         DB::table('d_todolist_attachment')->where('tla_todolist',$request->todolist)->delete();
@@ -499,6 +518,20 @@ class ProjectController extends Controller
     public function update_data_project(Request $request){
         DB::beginTransaction();
         try {
+            $cekStatusProject = DB::table('d_project')->where('p_id',$request->project)->first();
+            if($cekStatusProject != null){
+                if($cekStatusProject->p_status == 'Finish'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Tidak Dapat Memperbarui Data Project, Project'. $cekStatusProject->p_name . ' Sudah Selesai',
+                    ]);
+                }else if($cekStatusProject->p_status == 'Cancel'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Tidak Dapat Memperbarui Data Project, Project'. $cekStatusProject->p_name . ' Dibatalkan',
+                    ]);
+                }
+            }
             DB::table('d_project')->where('p_id',$request->project)->update([
                 'p_name' => $request->nama_project,
                 'p_timestart' => Carbon::parse($request->tanggal_awal),
@@ -533,6 +566,9 @@ class ProjectController extends Controller
                     ]);
                     break;
                 case 'pending mengerjakan':
+                    DB::table('d_todolist')->where('tl_status','!=','Finish')->where('tl_project',$request->project)->update([
+                        'tl_status' => 'Pending',
+                    ]);
                     DB::table('d_project')->where('p_id',$request->project)->update([
                         'p_status' => 'Pending',
                     ]);
@@ -544,8 +580,7 @@ class ProjectController extends Controller
                                     ->count();
                     if($cekSemuaTodo > 0){
                         return response()->json([
-                            'status' => 'failed',
-                            'message' => 'Untuk Menyelesaikan Project, Pastikan Semua ToDo Telah Selesai.'
+                            'status' => 'todo belum selesai',                       
                         ]);
                     }
                     DB::table('d_project')->where('p_id',$request->project)->update([
@@ -554,6 +589,10 @@ class ProjectController extends Controller
                     ]);
                     break;
                 case 'mulai mengerjakan lagi':
+                    DB::table('d_todolist')->where('tl_status','!=','Finish')->where('tl_project',$request->project)->update([
+                        'tl_status' => 'Open',
+                    ]);
+
                     DB::table('d_project')->where('p_id',$request->project)->update([
                         'p_status' => 'Working',
                     ]);
@@ -571,10 +610,30 @@ class ProjectController extends Controller
             return $e;
         }
     }
+    public function finish_project(Request $request){
+        DB::beginTransaction();
+        try {
+            DB::table('d_project')->where('p_id',$request->project)->update([
+                'p_status' => 'Finish',
+                'p_archive' => 'Y',
+            ]);
+
+            DB::table('d_todolist')->where('tl_project',$request->project)->where('tl_status','!=','Finish')->update([
+                'tl_status' => 'Tidak Tuntas'
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Berhasil!',
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
     public function delete_project(Request $request){
         DB::beginTransaction();
         try {
-            
             DB::table('d_project')->where('p_id',$request->project)->delete();
 
             $dataMemberProject = DB::table('d_project_member')->where('mp_project',$request->project)->delete();

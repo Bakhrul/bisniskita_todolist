@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use DB;
+use Auth;
 
 class VersionController extends Controller
 {
@@ -26,8 +27,27 @@ class VersionController extends Controller
         }
         
     }
+    public function updateversionuser(Request $request){
+           DB::beginTransaction();
+           try {
+            if(Auth::check()){
+            DB::table('m_users')->where('us_id',Auth::user()->us_id)->update([
+                'us_version' => $request->version
+            ]);
+         }else{
+         }
+         DB::commit();
+         return response()->json([
+                'status' => 'success',
+         ]);
+           } catch (Exception $e) {
+               DB::rollback();
+               return $e;
+           }
+          
+         
+    }
     public function cekversi_aplikasi(Request $request){
-
         $isTerbaru = DB::table('d_version')->orderBy('v_id','DESC')->first();
         $cekversiDB = DB::table('d_version')->where('v_id',$request->version)->first();
         if($isTerbaru->v_id == $request->version){

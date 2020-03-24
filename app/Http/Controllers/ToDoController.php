@@ -495,7 +495,7 @@ class ToDoController extends Controller
                         ->where('d_todolist_important.tli_users', Auth::user()->us_id);
                 })
                 ->leftJoin('d_project','tl_project','p_id')
-                ->where('tl_title', 'LIKE', $request->search .'%')
+                ->where('tl_title', 'LIKE','%' . $request->search .'%')
                 ->where(function($q){
                     $q->where('tl_project',NULL)
                         ->orWhere('tl_project','!=',NULL)
@@ -579,11 +579,9 @@ class ToDoController extends Controller
                     ->join('d_project', 'mp_project', 'p_id')
                     ->where('p_name', 'LIKE', '%' . $request->search .'%')                
                     ->where(function($q){
-                        $q->where('d_project.p_archive','Y')
+                        $q->where('d_project.p_archive','N')
+                          ->orWhere('d_project.p_archive','Y')
                           ->whereIn('mp_role',['1','2']);
-                    })
-                    ->orWhere(function($n){
-                        $n->where('d_project.p_archive','N');
                     })
                     ->where('mp_user',Auth::user()->us_id)
                     ->groupBy('mp_project')
@@ -745,6 +743,26 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menambahkan Document ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menambahkan Document ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
+
             $ext = pathinfo($request->pathname, PATHINFO_EXTENSION);
             $ext = str_replace("'", "", $ext);
             $image = $request->file64;
@@ -876,6 +894,11 @@ class ToDoController extends Controller
                         'status' => 'failed',
                         'message' => 'Tidak Dapat Melakukan Progress Report, ToDo ' . $cekStatusTodo->tl_title . ' Sudah Selesai Dikerjakan',
                     ]);
+                }else if($cekStatusTodo->tl_status == 'Tidak Tuntas'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Tidak Dapat Melakukan Progress Report, ToDo ' . $cekStatusTodo->tl_title . ' Tidak Tuntas',
+                    ]);
                 }
             }
 
@@ -911,6 +934,26 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todo)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menambahkan ToDo Done/Action/Ready/Normal, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menambahkan ToDo Done/Action/Ready/Normal, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
+
             switch ($request->type) {
                 case 'Action':
                     $subId = DB::table('d_todolist_action')->where('tla_todolist', $request->todo)->max('tla_number') + 1;
@@ -1069,7 +1112,7 @@ class ToDoController extends Controller
         $documentTodo = DB::table('d_todolist_attachment')
                         ->where('tla_todolist', $id)
                         ->get();
-        $statusKita = DB::table('d_todolist_roles')->where('tlr_users', Auth::user()->us_id)->orderBy('tlr_role', 'ASC')->first();
+        $statusKita = DB::table('d_todolist_roles')->where('tlr_todolist',$id)->where('tlr_users', Auth::user()->us_id)->orderBy('tlr_role', 'ASC')->first();
 
         return response()->json([
             'todo' => $todo,
@@ -1135,6 +1178,11 @@ class ToDoController extends Controller
                     return response()->json([
                         'status' => 'failed',
                         'message' => 'Tidak Dapat Melakukan '.$request->typedone.', ToDo ' . $cekStatusTodo->tl_title . ' Sudah Selesai Dikerjakan',
+                    ]);
+                }else if($cekStatusTodo->tl_status == 'Tidak Tuntas'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Tidak Dapat Melakukan '.$request->typedone.', ToDo ' . $cekStatusTodo->tl_title . ' Tidak Tuntas',
                     ]);
                 }
             }
@@ -1292,6 +1340,25 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+             $cekTodoProject = DB::table('d_todolist')->where('tl_id',$id)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Edit Data ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Edit Data ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
             $todo = Todo::find($id);
             $project = null;
             if ($request->category == '1') {
@@ -1458,6 +1525,26 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menambah Member ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menambah Member ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
+
             $cekUser = DB::table('m_users')->where('us_email', $request->member)->first();
             if ($cekUser == null) {
                 return response()->json([
@@ -1505,6 +1592,25 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus Member ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus Member ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
             DB::table('d_todolist_roles')->where('tlr_users', $request->member)->where('tlr_todolist', $request->todolist)->delete();
             DB::table('d_todolist_important')->where('tli_users', $request->member)->where('tli_todolist', $request->todolist)->delete();
             DB::table('d_notifications_todolist')->insert([
@@ -1535,6 +1641,26 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Mengganti Status Member ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Mengganti Status Member ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
+
             DB::table('d_todolist_roles')
             ->where('tlr_users', $request->member)
             ->where('tlr_todolist', $request->todolist)
@@ -1599,6 +1725,28 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $idTodo = DB::table('d_todolist_attachment')->where('tla_id',$id)->first();
+            if($idTodo != null){
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$idTodo->tla_todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus Document ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus Document ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }    
+            }            
             $data = Attachment::find($id);
             unlink(storage_path('files/'.$data->tla_path));
             $data->delete();
@@ -1788,6 +1936,11 @@ class ToDoController extends Controller
                     return response()->json([
                         'status' => 'failed',
                         'message' => 'Tidak Dapat Melakukan '.$request->typevalid.', ToDo ' . $cekStatusTodo->tl_title . ' Sudah Selesai Dikerjakan',
+                    ]);
+                }else if($cekStatusTodo->tl_status == 'Tidak Tuntas'){
+                    return response()->json([
+                        'status' => 'failed',
+                        'message' => 'Tidak Dapat Melakukan '.$request->typevalid.', ToDo ' . $cekStatusTodo->tl_title . ' Tidak Tuntas',
                     ]);
                 }
             }
@@ -1990,7 +2143,15 @@ class ToDoController extends Controller
                                         ->where('tld_todolist',$request->todo)
                                         ->where('tld_validation',NULL)
                                         ->count();
-                        if($cekActionTodo > 0 || $cekDoneTodo > 0){
+                        $cekReadytodo = DB::table('d_todolist_ready')
+                                        ->where('tlr_todolist',$request->todo)
+                                        ->where('tlr_validation',NULL)
+                                        ->count();
+                        $cekNormalTodo = DB::table('d_todolist_normal')
+                                        ->where('tln_todolist',$request->todo)
+                                        ->where('tln_validation',NULL)
+                                        ->count();
+                        if($cekActionTodo > 0 || $cekDoneTodo > 0 || $cekReadytodo > 0 || $cekNormalTodo > 0){
                             return response()->json([
                                 'status' => 'action dan done belum selesai',
                                 'message' => 'Pastikan ToDo Done dan ToDo Action Sudah Selesai Semua dan Sudah Tervalidasi',
@@ -2061,7 +2222,48 @@ class ToDoController extends Controller
             return $e;
         }
     }
-
+    public function finish_todo(Request $request){
+        DB::BeginTransaction();
+        try {
+            $masterNotifdone = DB::table('m_notifications')->where('n_id','9')->first();
+             $namaTodo = DB::table('d_todolist')->where('tl_id',$request->todo)->first();
+             DB::table('d_todolist')->where('tl_id', $request->todo)->update([
+                 'tl_exeend' => Carbon::now('Asia/Jakarta'),
+                 'tl_status' => 'Finish',
+                 'tl_progress' => 100,
+            ]);
+             DB::table('d_todolist_timeline')->insert([
+                'tlt_todolist' => $request->todo,
+                'tlt_user' => Auth::user()->us_id,
+                'tlt_progress' => 100,
+                'tlt_note' => 'To Do Sudah Selesai Dikerjakan',
+                'tlt_created' => Carbon::now('Asia/Jakarta'),
+             ]);
+         $todoMember = DB::table('d_todolist_roles')->where('tlr_todolist',$request->todo)->groupBy('tlr_users')->get();
+         foreach ($todoMember as $key => $value) {
+             DB::table('d_notifications_todolist')->insert([
+                'nt_notifications' => '9',
+                'nt_todolist' => $request->todo,
+                'nt_project' => null,
+                'nt_fromuser' => Auth::user()->us_id,
+                'nt_touser' => $value->tlr_users,
+                'nt_status' => 'N',
+                'nt_created' => Carbon::now('Asia/Jakarta'),
+             ]);
+             $send_notif = new TokenController();
+             $send_notif->sendNotif(''.$masterNotifdone->n_title .' - Todolist',$namaTodo->tl_title . ' ' . $masterNotifdone->n_message,$value->tlr_users);
+         }
+         DB::commit();
+         return response()->json([
+            'status' => 'success',
+            'message' => 'Berhasil.',
+             'todo' => $namaTodo,
+         ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            return $e;
+        }
+    }
     public function todo_activity(Request $request)
     {
         $TodoActivity = DB::table('d_todolist_timeline')
@@ -2076,6 +2278,25 @@ class ToDoController extends Controller
     {
         DB::BeginTransaction();
         try {
+            $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus ToDo, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus ToDo, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
             DB::table('d_todolist')->where('tl_id', $request->todolist)->delete();
             DB::table('d_todolist_action')->where('tla_todolist', $request->todolist)->delete();
             DB::table('d_todolist_attachment')->where('tla_todolist', $request->todolist)->delete();
@@ -2098,6 +2319,26 @@ class ToDoController extends Controller
     public function update_todoaction(Request $request){
         DB::BeginTransaction();
         try {
+             $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Memperbarui ToDo Done/Action/Ready/Normal, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Memperbarui ToDo Done/Action/Ready/Normal, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
+
             switch ($request->type) {
                             case 'done':
                                 DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->where('tld_number',$request->idchildtodolist)->update([
@@ -2134,6 +2375,26 @@ class ToDoController extends Controller
       public function delete_todoaction(Request $request){
         DB::BeginTransaction();
         try {
+             $cekTodoProject = DB::table('d_todolist')->where('tl_id',$request->todolist)->first();
+            if($cekTodoProject != null){
+                if($cekTodoProject->tl_project != null){
+                    $cekStatusProject = DB::table('d_project')->where('p_id',$cekTodoProject->tl_project)->first();
+                    if($cekStatusProject != null){
+                        if($cekStatusProject->p_status == 'Finish'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus ToDo Done/Action/Ready/Normal, Project '.$cekStatusProject->p_name . ' Sudah Selesai',
+                            ]);
+                        }else if($cekStatusProject->p_status == 'Cancel'){
+                            return response()->json([
+                                'status' => 'failed',
+                                'message' => 'Tidak Dapat Menghapus ToDo Done/Action/Ready/Normal, Project ' . $cekStatusProject->p_name . ' Dibatalkan',
+                            ]);
+                        }
+                    }
+                }
+            }
+
             switch ($request->type) {
                             case 'done':
                                 DB::table('d_todolist_done')->where('tld_todolist',$request->todolist)->where('tld_number',$request->idchildtodolist)->delete();

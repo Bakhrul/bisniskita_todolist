@@ -18,6 +18,7 @@ Route::post('/user/register', 'UserController@register');
 Route::post('/reset_password','ResetPasswordController@reminder_password');
 Route::post('/checkversionaplikasi','VersionController@cekversi_aplikasi');
 Route::group(['middleware' => 'auth:api'], function(){
+    Route::post('/updateversionuser','VersionController@updateversionuser');
     Route::get('/trackingFriend','FriendListController@trackingFriend');
     Route::post('/kirimlokasiterkini','UserController@lokasiterkini');
 
@@ -50,7 +51,7 @@ Route::group(['middleware' => 'auth:api'], function(){
     Route::get('/todo/todo_normal/{id}','ToDoController@todo_normal');
     Route::get('/todo/todo_done/{id}','ToDoController@todo_done');
     Route::post('/todo/started-todo','ToDoController@started_todo');
-
+    Route::post('/todo/finish-todo','ToDoController@finish_todo');
     Route::post('todo_edit/tambah_member','ToDoController@todo_edit_addmember');
     Route::post('todo_edit/delete_member','ToDoController@todo_edit_deletemember');
     Route::post('todo_edit/ganti_statusmember','ToDoController@todo_edit_ganti_statusmember');
@@ -101,6 +102,7 @@ Route::group(['middleware' => 'auth:api'], function(){
 
     Route::post('/update_data_project','ProjectController@update_data_project');
     Route::post('/project/started-project','ProjectController@started_project');
+    Route::post('/project/finish-project','ProjectController@finish_project');
 
     Route::get('/userdetail/{id}','UserController@detail_user');
 
